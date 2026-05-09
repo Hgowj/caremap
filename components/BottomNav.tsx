@@ -1,44 +1,41 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { Map, AlertTriangle, Calendar, Settings } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { Map, Building2, BookmarkCheck, StickyNote, Settings } from "lucide-react";
 
 const NAV = [
-  { href: "/map",      label: "Navigate", Icon: Map },
-  { href: "/reports",  label: "Reports",  Icon: AlertTriangle },
-  { href: "/events",   label: "Events",   Icon: Calendar },
-  { href: "/settings", label: "Settings", Icon: Settings },
+  { href: "/map",        label: "Map",        icon: Map },
+  { href: "/facilities", label: "Facilities",  icon: Building2 },
+  { href: "/saved",      label: "Saved",       icon: BookmarkCheck },
+  { href: "/notes",      label: "Notes",       icon: StickyNote },
+  { href: "/settings",   label: "Settings",    icon: Settings },
 ];
 
 export default function BottomNav() {
-  const path = usePathname();
+  const pathname = usePathname();
+  const router   = useRouter();
 
   return (
-    <nav
-      className="w-full bg-white border-t border-gray-100 shrink-0"
-      style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+    <nav className="shrink-0 bg-white border-t border-gray-100 flex items-center justify-around px-2 pb-safe"
+      style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
     >
-      <div className="flex">
-        {NAV.map(({ href, label, Icon }) => {
-          const active = path.startsWith(href);
-          return (
-            <Link
-              key={href}
-              href={href}
-              className={`flex-1 flex flex-col items-center gap-1 py-3 transition-colors relative ${
-                active ? "text-teal-600" : "text-gray-400 hover:text-gray-600"
-              }`}
-            >
-              {active && (
-                <span className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-teal-500 rounded-full" />
-              )}
-              <Icon size={20} strokeWidth={active ? 2.5 : 1.8} />
-              <span className="text-[10px] font-medium">{label}</span>
-            </Link>
-          );
-        })}
-      </div>
+      {NAV.map(({ href, label, icon: Icon }) => {
+        const active = pathname === href || (href !== "/map" && pathname.startsWith(href));
+        return (
+          <button
+            key={href}
+            onClick={() => router.push(href)}
+            className={`flex flex-col items-center gap-0.5 py-2.5 px-3 rounded-xl transition-all min-w-[52px] ${
+              active ? "text-brand-600" : "text-gray-400 hover:text-gray-600"
+            }`}
+          >
+            <Icon size={20} strokeWidth={active ? 2.5 : 1.8} />
+            <span className={`text-[10px] font-medium ${active ? "text-brand-600" : "text-gray-400"}`}>
+              {label}
+            </span>
+          </button>
+        );
+      })}
     </nav>
   );
 }
