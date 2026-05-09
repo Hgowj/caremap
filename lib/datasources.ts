@@ -34,32 +34,21 @@ export async function getToiletsNearby(
   radiusMetres: number = 800
 ): Promise<ToiletLocation[]> {
   try {
-    // Fetch from the worker's own origin — works in Cloudflare Workers
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? "https://caremap.goh-jing-wen.workers.dev";
-    const res = await fetch(`${baseUrl}/toilets.geojson`, {
-      cf: { cacheEverything: true, cacheTtl: 86400 },
-    } as any);
+    const res = await fetch(`${baseUrl}/toilets.json`);
     if (!res.ok) throw new Error(`${res.status}`);
-
-    const geoJson = await res.json();
+    const all: any[] = await res.json();
     const radiusDeg = radiusMetres / 111320;
-
-    return (geoJson.features ?? [])
-      .filter((f: any) => {
-        if (f.geometry?.type !== "Point") return false;
-        if (f.properties?.amenity !== "toilets") return false;
-        if (f.properties?.access === "private") return false;
-        const [fLng, fLat] = f.geometry.coordinates;
-        return Math.sqrt((fLat - lat) ** 2 + (fLng - lng) ** 2) <= radiusDeg;
-      })
-      .map((f: any) => ({
-        id: f.properties.id ?? `osm-${f.geometry.coordinates.join(",")}`,
-        name: f.properties.name ?? f.properties["addr:street"] ?? "Public Toilet",
-        lat: f.geometry.coordinates[1],
-        lng: f.geometry.coordinates[0],
-        hasBidet: f.properties["toilets:bidet"] === "yes",
-        hasHandicap: f.properties.wheelchair === "yes" || f.properties["toilets:wheelchair"] === "yes",
-        isFree: f.properties.fee === "no",
+    return all
+      .filter((t) => Math.sqrt((t.lat - lat) ** 2 + (t.lng - lng) ** 2) <= radiusDeg)
+      .map((t) => ({
+        id: t.id,
+        name: t.name ?? "Public Toilet",
+        lat: t.lat,
+        lng: t.lng,
+        hasBidet: t.bidet,
+        hasHandicap: t.wheelchair,
+        isFree: t.free,
         source: "osm" as const,
       }));
   } catch (err) {
