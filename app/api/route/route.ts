@@ -40,8 +40,7 @@ export async function GET(req: NextRequest) {
 
     // Decode polyline and get elevation data
     let routePoints: [number, number][] = [[startLat, startLng], [endLat, endLng]];
-    let terrain = { maxGradientPercent: 0, avgGradientPercent: 0, classification: "flat" as const, totalAscent: 0, totalDescent: 0 };
-
+    let terrain: { maxGradientPercent: number; avgGradientPercent: number; classification: "flat" | "gentle" | "steep"; totalAscent: number; totalDescent: number } = { maxGradientPercent: 0, avgGradientPercent: 0, classification: "flat", totalAscent: 0, totalDescent: 0 };
     if (data.route_geometry) {
       const decoded = decodePolyline(data.route_geometry);
       if (decoded.length >= 2) {
