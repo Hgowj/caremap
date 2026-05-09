@@ -28,24 +28,29 @@ export interface Park {
   lng: number;
 }
 
-// ─── Toilets — read from bundled local file ───────────────────────────────────
 export async function getToiletsNearby(
   lat: number,
   lng: number,
   radiusMetres: number = 800
 ): Promise<ToiletLocation[]> {
   try {
-    const features = (toiletData as any).features ?? [];
+    // Fetch from the worker's own origin — works in Cloudflare Workers
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? "https://caremap.goh-jing-wen.workers.dev";
+    const res = await fetch(`${baseUrl}/toilets.geojson`, {
+      cf: { cacheEverything: true, cacheTtl: 86400 },
+    } as any);
+    if (!res.ok) throw new Error(`${res.status}`);
+
+    const geoJson = await res.json();
     const radiusDeg = radiusMetres / 111320;
 
-    return features
+    return (geoJson.features ?? [])
       .filter((f: any) => {
         if (f.geometry?.type !== "Point") return false;
         if (f.properties?.amenity !== "toilets") return false;
         if (f.properties?.access === "private") return false;
         const [fLng, fLat] = f.geometry.coordinates;
-        const d = Math.sqrt((fLat - lat) ** 2 + (fLng - lng) ** 2);
-        return d <= radiusDeg;
+        return Math.sqrt((fLat - lat) ** 2 + (fLng - lng) ** 2) <= radiusDeg;
       })
       .map((f: any) => ({
         id: f.properties.id ?? `osm-${f.geometry.coordinates.join(",")}`,
@@ -53,14 +58,12 @@ export async function getToiletsNearby(
         lat: f.geometry.coordinates[1],
         lng: f.geometry.coordinates[0],
         hasBidet: f.properties["toilets:bidet"] === "yes",
-        hasHandicap:
-          f.properties.wheelchair === "yes" ||
-          f.properties["toilets:wheelchair"] === "yes",
+        hasHandicap: f.properties.wheelchair === "yes" || f.properties["toilets:wheelchair"] === "yes",
         isFree: f.properties.fee === "no",
         source: "osm" as const,
       }));
   } catch (err) {
-    console.error("[Toilets] Failed:", err);
+    console.error("[Toilets] Failed to fetch:", err);
     return [];
   }
 }

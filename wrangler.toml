@@ -13,3 +13,6 @@ binding = "AI"
 
 [assets]
 directory = ".open-next/assets"
+
+[vars]
+NEXT_PUBLIC_BASE_URL = "https://caremap.goh-jing-wen.workers.dev"
