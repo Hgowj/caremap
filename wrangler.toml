@@ -3,9 +3,6 @@ compatibility_date = "2024-09-23"
 compatibility_flags = ["nodejs_compat"]
 pages_build_output_dir = ".next"
 
-[build]
-command = "npm install --legacy-peer-deps && npm run build"
-
 [[d1_databases]]
 binding = "DB"
 database_name = "caremap-db"
