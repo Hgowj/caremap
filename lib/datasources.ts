@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import toiletData from "../public/toilets.geojson";
 
 export interface ToiletLocation {
   id: string;
@@ -28,33 +29,26 @@ export interface Park {
 }
 
 // ─── Toilets — read from bundled local file ───────────────────────────────────
-
 export async function getToiletsNearby(
   lat: number,
   lng: number,
   radiusMetres: number = 800
 ): Promise<ToiletLocation[]> {
   try {
-    // Fetch the bundled static GeoJSON from the public folder via HTTP
-    // (fs.readFileSync doesn't work in Cloudflare Workers)
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? "https://caremap.goh-jing-wen.workers.dev";
-    const res = await fetch(`${baseUrl}/toilets.geojson`);
-    if (!res.ok) throw new Error(`Failed to fetch toilets: ${res.status}`);
+    const features = (toiletData as any).features ?? [];
+    const radiusDeg = radiusMetres / 111320;
 
-    const geoJson = await res.json();
-
-    // Filter by radius and extract only amenity=toilets points
-    return (geoJson.features ?? [])
+    return features
       .filter((f: any) => {
         if (f.geometry?.type !== "Point") return false;
         if (f.properties?.amenity !== "toilets") return false;
+        if (f.properties?.access === "private") return false;
         const [fLng, fLat] = f.geometry.coordinates;
-        // Quick bounding box check, then precise distance
-        const distM = haversineMetres(lat, lng, fLat, fLng);
-        return distM <= radiusMetres;
+        const d = Math.sqrt((fLat - lat) ** 2 + (fLng - lng) ** 2);
+        return d <= radiusDeg;
       })
       .map((f: any) => ({
-        id: f.properties.id ?? `osm-${Math.random()}`,
+        id: f.properties.id ?? `osm-${f.geometry.coordinates.join(",")}`,
         name: f.properties.name ?? f.properties["addr:street"] ?? "Public Toilet",
         lat: f.geometry.coordinates[1],
         lng: f.geometry.coordinates[0],
@@ -66,7 +60,7 @@ export async function getToiletsNearby(
         source: "osm" as const,
       }));
   } catch (err) {
-    console.error("[Toilets] Failed to read local file:", err);
+    console.error("[Toilets] Failed:", err);
     return [];
   }
 }

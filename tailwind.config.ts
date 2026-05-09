@@ -9,36 +9,45 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // CareMap brand tokens
+        brand: {
+          50:  "#e6f7f2",
+          100: "#b3e6d5",
+          200: "#80d4b8",
+          300: "#4dc3a0",
+          400: "#26b58e",
+          500: "#00A172",  // primary brand green
+          600: "#008f64",
+          700: "#007a56",
+          800: "#006648",
+          900: "#004f37",
+        },
+        // keep teal as alias for backwards compat
         teal: {
-          50:  "#f0fdfa",
-          100: "#ccfbf1",
-          400: "#2dd4bf",
-          500: "#14b8a6",
-          600: "#0d9488",
-          700: "#0f766e",
+          50:  "#e6f7f2",
+          100: "#b3e6d5",
+          400: "#26b58e",
+          500: "#00A172",
+          600: "#008f64",
+          700: "#007a56",
         },
         sage: {
-          50:  "#f6f9f6",
-          100: "#e8f0e8",
-          200: "#c8dcc8",
+          50:  "#f4faf7",
+          100: "#e0f2eb",
+          200: "#c0e5d6",
         },
         coral: {
           400: "#fb7185",
           500: "#f43f5e",
         },
-        amber: {
-          400: "#fbbf24",
-          500: "#f59e0b",
-        },
       },
       fontFamily: {
-        sans: ["var(--font-dm-sans)", "system-ui", "sans-serif"],
-        display: ["var(--font-plus-jakarta)", "system-ui", "sans-serif"],
+        sans:    ["Inter", "system-ui", "sans-serif"],
+        display: ["Inter", "system-ui", "sans-serif"],
       },
       borderRadius: {
         "2xl": "1rem",
         "3xl": "1.5rem",
+        "4xl": "2rem",
       },
     },
   },

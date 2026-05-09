@@ -6,13 +6,14 @@
 @import "leaflet/dist/leaflet.css";
 
 :root {
-  --teal-primary: #0d9488;
-  --teal-light: #ccfbf1;
-  --sage-bg: #f6f9f6;
+  --brand-primary: #00A172;
+  --brand-light: #e6f7f2;
+  --sage-bg: #f4faf7;
   --coral-report: #f43f5e;
   --amber-warning: #f59e0b;
   --radius-card: 1.25rem;
-  --shadow-card: 0 2px 16px rgba(13, 148, 136, 0.08);
+  --shadow-card: 0 2px 16px rgba(0, 161, 114, 0.08);
+  --font-inter: 'Inter', system-ui, sans-serif;
 }
 
 /* Smooth scroll */
@@ -67,4 +68,4 @@
 /* Custom scrollbar */
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #2dd4bf; border-radius: 2px; }
+::-webkit-scrollbar-thumb { background: #00A172; border-radius: 2px; }
