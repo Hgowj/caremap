@@ -1,0 +1,13 @@
+name = "caremap"
+account_id = "363349529c189319d227ef725483cdad"
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
+pages_build_output_dir = ".next"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "caremap-db"
+database_id = "8610140f-c933-4a8f-86fb-6d61d25e878b"
+
+[ai]
+binding = "AI"

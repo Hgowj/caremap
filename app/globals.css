@@ -1,0 +1,70 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Leaflet map styles */
+@import "leaflet/dist/leaflet.css";
+
+:root {
+  --teal-primary: #0d9488;
+  --teal-light: #ccfbf1;
+  --sage-bg: #f6f9f6;
+  --coral-report: #f43f5e;
+  --amber-warning: #f59e0b;
+  --radius-card: 1.25rem;
+  --shadow-card: 0 2px 16px rgba(13, 148, 136, 0.08);
+}
+
+/* Smooth scroll */
+* {
+  scroll-behavior: smooth;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Bottom nav safe area */
+.pb-safe {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}
+
+/* Map container — must have explicit height for Leaflet */
+.map-container {
+  height: calc(100vh - 160px);
+  width: 100%;
+  border-radius: var(--radius-card);
+  overflow: hidden;
+  z-index: 0;
+}
+
+/* Report pin pulse animation */
+@keyframes ping-slow {
+  0%   { transform: scale(1); opacity: 1; }
+  75%  { transform: scale(1.8); opacity: 0; }
+  100% { transform: scale(1.8); opacity: 0; }
+}
+.animate-ping-slow {
+  animation: ping-slow 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+/* Card slide-up animation */
+@keyframes slideUp {
+  from { transform: translateY(24px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+.slide-up {
+  animation: slideUp 0.3s ease-out forwards;
+}
+
+/* Leaflet popup override */
+.leaflet-popup-content-wrapper {
+  border-radius: 1rem !important;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.12) !important;
+  font-family: var(--font-dm-sans), system-ui, sans-serif !important;
+}
+.leaflet-popup-tip-container {
+  display: none;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #2dd4bf; border-radius: 2px; }
