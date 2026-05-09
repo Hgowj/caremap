@@ -10,7 +10,7 @@ async function hashPassword(password: string): Promise<string> {
 
 export async function POST(req: NextRequest) {
   const { env } = await getCloudflareContext({ async: true });
-  const db = env.DB;
+  const db = (env as any).DB;
   if (!db) return NextResponse.json({ error: "DB not available" }, { status: 500 });
 
   const { email, password } = await req.json() as any;

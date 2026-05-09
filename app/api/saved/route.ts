@@ -6,7 +6,7 @@ export async function GET(req: NextRequest) {
   const session = getSession(req);
   if (!session) return NextResponse.json({ saved: [] });
   const { env } = await getCloudflareContext({ async: true });
-  const db = env.DB;
+  const db = (env as any).DB;
   const { results } = await db.prepare(
     "SELECT * FROM saved_locations WHERE user_id = ? ORDER BY created_at DESC"
   ).bind(session.userId).all();
@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
   const session = getSession(req);
   if (!session) return NextResponse.json({ error: "Not logged in" }, { status: 401 });
   const { env } = await getCloudflareContext({ async: true });
-  const db = env.DB;
+  const db = (env as any).DB;
   const { label, address, lat, lng, icon } = await req.json() as any;
   const id = crypto.randomUUID();
   await db.prepare(
@@ -30,7 +30,7 @@ export async function DELETE(req: NextRequest) {
   const session = getSession(req);
   if (!session) return NextResponse.json({ error: "Not logged in" }, { status: 401 });
   const { env } = await getCloudflareContext({ async: true });
-  const db = env.DB;
+  const db = (env as any).DB;
   const { id } = await req.json() as any;
   await db.prepare("DELETE FROM saved_locations WHERE id = ? AND user_id = ?")
     .bind(id, session.userId).run();

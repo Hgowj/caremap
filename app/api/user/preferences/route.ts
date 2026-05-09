@@ -6,7 +6,7 @@ export async function GET(req: NextRequest) {
   const session = getSession(req);
   if (!session) return NextResponse.json({ error: "Not logged in" }, { status: 401 });
   const { env } = await getCloudflareContext({ async: true });
-  const db = env.DB;
+  const db = (env as any).DB;
   const prefs = await db.prepare("SELECT * FROM user_preferences WHERE user_id = ?")
     .bind(session.userId).first();
   return NextResponse.json({ prefs: prefs ?? null });
@@ -16,7 +16,7 @@ export async function PUT(req: NextRequest) {
   const session = getSession(req);
   if (!session) return NextResponse.json({ error: "Not logged in" }, { status: 401 });
   const { env } = await getCloudflareContext({ async: true });
-  const db = env.DB;
+  const db = (env as any).DB;
   const body = await req.json() as any;
   await db.prepare(`
     INSERT INTO user_preferences (user_id, user_type, mobility_aid, slope_pref, sheltered, rest_stops, washroom_access, washroom_freq, home_lat, home_lng, home_label)
