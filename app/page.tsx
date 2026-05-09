@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { Loader2 } from "lucide-react";
 
 export default function Home() {
   const router = useRouter();
@@ -17,7 +18,10 @@ export default function Home() {
 
   return (
     <div className="flex items-center justify-center h-full">
-      <div className="w-8 h-8 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
+      <div className="flex flex-col items-center gap-3">
+        <span className="text-brand-500 font-bold text-2xl tracking-tight">CareMap</span>
+        <Loader2 size={20} className="animate-spin text-brand-400" />
+      </div>
     </div>
   );
 }

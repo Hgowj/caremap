@@ -47,21 +47,28 @@ export default function OnboardingPage() {
     setAuthLoading(true);
     setAuthError("");
     try {
-      const endpoint = isLogin ? "/api/auth/login" : "/api/auth/register";
-      const res = await fetch(endpoint, {
+        const endpoint = isLogin ? "/api/auth/login" : "/api/auth/register";
+        const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
-      });
-      const data = await res.json() as any;
-      if (!res.ok) { setAuthError(data.error ?? "Something went wrong"); return; }
-      setStep("who");
+        });
+        const data = await res.json() as any;
+        if (!res.ok) { setAuthError(data.error ?? "Something went wrong"); return; }
+
+        if (isLogin) {
+        // Returning user — go straight to map, prefs already saved
+        router.push("/map");
+        } else {
+        // New account — walk through preferences
+        setStep("who");
+        }
     } catch {
-      setAuthError("Network error — please try again");
+        setAuthError("Network error — please try again");
     } finally {
-      setAuthLoading(false);
+        setAuthLoading(false);
     }
-  };
+};
 
   const searchHome = async (query: string) => {
     setHomeQuery(query);
@@ -203,7 +210,15 @@ export default function OnboardingPage() {
             </div>
 
             <button
-              onClick={() => { localStorage.setItem("cm_guest", "1"); setStep("who"); }}
+              onClick={() => {
+                localStorage.setItem("cm_guest", "1");
+                const alreadyOnboarded = localStorage.getItem("cm_onboarded");
+                if (alreadyOnboarded) {
+                    router.push("/map");
+                } else {
+                    setStep("who");
+                }
+                }}
               className="w-full py-3 rounded-2xl border-2 border-gray-100 text-sm text-gray-500 hover:border-gray-200 transition-all"
             >
               Continue as guest
