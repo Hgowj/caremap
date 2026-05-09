@@ -35,36 +35,52 @@ export async function getToiletsNearby(
   radiusMetres: number = 800
 ): Promise<ToiletLocation[]> {
   try {
-    // File is at public/toilets.json — read directly with fs (server-side only)
-    const filePath = path.join(process.cwd(), "public", "toilets.json");
-    const raw      = fs.readFileSync(filePath, "utf-8");
-    const all      = JSON.parse(raw) as Array<{
-      id: string; lat: number; lng: number;
-      name: string; wheelchair: boolean; bidet: boolean;
-    }>;
+    // Fetch the bundled static GeoJSON from the public folder via HTTP
+    // (fs.readFileSync doesn't work in Cloudflare Workers)
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? "https://caremap.goh-jing-wen.workers.dev";
+    const res = await fetch(`${baseUrl}/toilets.geojson`);
+    if (!res.ok) throw new Error(`Failed to fetch toilets: ${res.status}`);
 
-    const radiusDeg = radiusMetres / 111320;
+    const geoJson = await res.json();
 
-    const nearby = all.filter((t) => {
-      const d = Math.sqrt((t.lat - lat) ** 2 + (t.lng - lng) ** 2);
-      return d <= radiusDeg;
-    });
-
-    console.log(`[Toilets] ${nearby.length} within ${radiusMetres}m of ${lat},${lng} (total: ${all.length})`);
-
-    return nearby.map((t) => ({
-      id:          t.id,
-      name:        t.name || "Public Toilet",
-      lat:         t.lat,
-      lng:         t.lng,
-      hasBidet:    t.bidet,
-      hasHandicap: t.wheelchair,
-      source:      "osm" as const,
-    }));
+    // Filter by radius and extract only amenity=toilets points
+    return (geoJson.features ?? [])
+      .filter((f: any) => {
+        if (f.geometry?.type !== "Point") return false;
+        if (f.properties?.amenity !== "toilets") return false;
+        const [fLng, fLat] = f.geometry.coordinates;
+        // Quick bounding box check, then precise distance
+        const distM = haversineMetres(lat, lng, fLat, fLng);
+        return distM <= radiusMetres;
+      })
+      .map((f: any) => ({
+        id: f.properties.id ?? `osm-${Math.random()}`,
+        name: f.properties.name ?? f.properties["addr:street"] ?? "Public Toilet",
+        lat: f.geometry.coordinates[1],
+        lng: f.geometry.coordinates[0],
+        hasBidet: f.properties["toilets:bidet"] === "yes",
+        hasHandicap:
+          f.properties.wheelchair === "yes" ||
+          f.properties["toilets:wheelchair"] === "yes",
+        isFree: f.properties.fee === "no",
+        source: "osm" as const,
+      }));
   } catch (err) {
     console.error("[Toilets] Failed to read local file:", err);
     return [];
   }
+}
+
+function haversineMetres(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371000;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLng = ((lng2 - lng1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
 // ─── Hawker Centres ───────────────────────────────────────────────────────────
