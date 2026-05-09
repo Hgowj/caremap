@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getCloudflareContext } from "@opennextjs/cloudflare";
 
 async function hashPassword(password: string): Promise<string> {
   const encoder = new TextEncoder();
@@ -8,14 +9,15 @@ async function hashPassword(password: string): Promise<string> {
 }
 
 export async function POST(req: NextRequest) {
-  const db = (process.env as any).DB as D1Database;
+  const { env } = await getCloudflareContext({ async: true });
+  const db = env.DB;
   if (!db) return NextResponse.json({ error: "DB not available" }, { status: 500 });
 
-  const { email, password } = await req.json();
+  const { email, password } = await req.json() as any;
 
   try {
     const user = await db.prepare("SELECT id, password_hash FROM users WHERE email = ?")
-      .bind(email.toLowerCase()).first<{ id: string; password_hash: string }>();
+      .bind(email.toLowerCase()).first() as any;
 
     if (!user) return NextResponse.json({ error: "Invalid email or password" }, { status: 401 });
 

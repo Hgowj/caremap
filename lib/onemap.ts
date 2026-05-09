@@ -70,7 +70,7 @@ export async function getToken(): Promise<string> {
   });
 
   if (!res.ok) throw new Error(`OneMap auth failed: ${res.status}`);
-  _cachedToken = await res.json();
+  _cachedToken = await res.json() as any;
   return _cachedToken!.access_token;
 }
 
@@ -82,7 +82,7 @@ export async function searchAddress(query: string): Promise<SearchResult[]> {
   });
   const res = await fetch(`${ONEMAP_BASE}/api/common/elastic/search?${params}`);
   if (!res.ok) return [];
-  const data = await res.json();
+  const data = await res.json() as any;
   return data.results ?? [];
 }
 
@@ -112,7 +112,7 @@ export async function getThemePois(themeName: string): Promise<PoiResult[]> {
     { headers: { Authorization: token } }
   );
   if (!res.ok) return [];
-  const data = await res.json();
+  const data = await res.json() as any;
   return data.SrchResults?.slice(1) ?? [];
 }
 
@@ -152,7 +152,7 @@ export async function reverseGeocode(lat: number, lng: number): Promise<string> 
       { headers: { Authorization: token } }
     );
     if (!res.ok) return `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
-    const data = await res.json();
+    const data = await res.json() as any;
     const info = data.GeocodeInfo?.[0];
     if (!info) return `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
     const parts = [info.BLOCK, info.ROAD, info.BUILDINGNAME].filter((v: string) => v && v !== "NIL");

@@ -47,7 +47,7 @@ export default function SearchBar({ placeholder, onSelect, icon = "destination",
       setLoading(true);
       try {
         const res  = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
-        const data = await res.json();
+        const data = await res.json() as any;
         setResults(data.results?.slice(0, 6) ?? []);
         setOpen(true);
       } catch {

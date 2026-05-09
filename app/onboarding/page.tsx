@@ -42,7 +42,7 @@ export default function OnboardingPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
       });
-      const data = await res.json();
+      const data = await res.json() as any as any;
       if (!res.ok) { setAuthError(data.error ?? "Something went wrong"); return; }
       setStep("who");
     } catch {

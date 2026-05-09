@@ -20,10 +20,10 @@ async function fetchDataset(id: string) {
     `https://api-open.data.gov.sg/v1/public/api/datasets/${id}/poll-download`,
     { signal: AbortSignal.timeout(8000) }
   );
-  const poll = await pollRes.json();
+  const poll = await pollRes.json() as any;
   if (poll.code !== 0) throw new Error(poll.errMsg);
   const geoRes = await fetch(poll.data.url, { signal: AbortSignal.timeout(15000) });
-  return geoRes.json();
+  return geoRes.json() as any;
 }
 
 export async function GET(req: NextRequest) {

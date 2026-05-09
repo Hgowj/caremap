@@ -25,7 +25,7 @@ type ClickMode = "report" | "set-origin" | "set-dest" | null;
 async function reverseGeocodeClient(lat: number, lng: number): Promise<PlaceResult | null> {
   try {
     const res  = await fetch(`/api/reverse-geocode?lat=${lat}&lng=${lng}`);
-    const data = await res.json();
+    const data = await res.json() as any as any;
     return data.address ?? null;
   } catch { return null; }
 }
@@ -38,7 +38,7 @@ async function getElevationProfile(points: [number, number][]): Promise<number[]
     const sampled = points.filter((_, i) => i % step === 0);
     const locations = sampled.map(([lat, lng]) => `${lat},${lng}`).join("|");
     const res  = await fetch(`https://api.open-meteo.com/v1/elevation?latitude=${sampled.map(p=>p[0]).join(",")}&longitude=${sampled.map(p=>p[1]).join(",")}`);
-    const data = await res.json();
+    const data = await res.json() as any as any;
     return data.elevation ?? [];
   } catch { return []; }
 }
@@ -99,7 +99,11 @@ function MapPageInner() {
   const [showHawkers, setShowHawkers]     = useState(false);
   const [showEvents, setShowEvents]       = useState(false);
   const [routing, setRouting]             = useState(false);
-  const [routeSummary, setRouteSummary]   = useState<{ time: number; distance: number } | null>(null);
+  const [routeSummary, setRouteSummary] = useState<{
+  time: number;
+  distance: number;
+  terrain: { classification: string; maxGradientPercent: number; totalAscent: number } | null;
+} | null>(null);
   const [elevationInfo, setElevationInfo] = useState<{ maxGradient: number; totalAscent: number; warning: string | null; colour: string } | null>(null);
   const [clickMode, setClickMode]         = useState<ClickMode>(null);
   const [reportCoords, setReportCoords]   = useState<[number, number] | null>(null);
@@ -138,13 +142,13 @@ function MapPageInner() {
   }, []);
 
   const fetchReports = async () => {
-    try { const r = await fetch("/api/reports"); setReports((await r.json()).reports ?? []); } catch {}
+    try { const r = await fetch("/api/reports"); setReports((await r.json() as any).reports ?? []); } catch {}
   };
   const fetchToilets = async (lat: number, lng: number) => {
-    try { const r = await fetch(`/api/pois?lat=${lat}&lng=${lng}&radius=800&types=toilet`); setToilets((await r.json()).toilets ?? []); } catch {}
+    try { const r = await fetch(`/api/pois?lat=${lat}&lng=${lng}&radius=800&types=toilet`); setToilets((await r.json() as any).toilets ?? []); } catch {}
   };
   const fetchHawkers = async () => {
-    try { const r = await fetch("/api/pois?lat=1.3521&lng=103.8198&types=hawker"); setHawkers((await r.json()).hawkerCentres ?? []); } catch {}
+    try { const r = await fetch("/api/pois?lat=1.3521&lng=103.8198&types=hawker"); setHawkers((await r.json() as any).hawkerCentres ?? []); } catch {}
   };
 
   const handleUseMyLocation = () => {
@@ -194,28 +198,25 @@ function MapPageInner() {
 
     try {
       const res  = await fetch(`/api/route?startLat=${sLat}&startLng=${sLng}&endLat=${eLat}&endLng=${eLng}`);
-      const data = await res.json();
+      const data = await res.json() as any as any;
 
       if (data.route_summary) {
-        setRouteSummary({ time: data.route_summary.total_time, distance: data.route_summary.total_distance });
+        setRouteSummary({
+          time: data.route_summary.total_time,
+          distance: data.route_summary.total_distance,
+          terrain: data.terrain ?? null,
+        });
 
-        let decoded: [number, number][] = [[sLat, sLng], [eLat, eLng]];
-        if (data.route_geometry) {
-          const { decodePolyline } = await import("@/lib/onemap");
-          const d = decodePolyline(data.route_geometry);
-          if (d.length >= 2) decoded = d;
+        // Use pre-decoded route_points from server (includes elevation analysis)
+        if (data.route_points?.length >= 2) {
+          setRoutePoints(data.route_points);
+        } else {
+          setRoutePoints([[sLat, sLng], [eLat, eLng]]);
         }
-        setRoutePoints(decoded);
+
         setMapCenter([sLat, sLng]);
         setPanelOpen(false);
         if (showToilets) fetchToilets((sLat + eLat) / 2, (sLng + eLng) / 2);
-
-        // Fetch elevation profile in background
-        getElevationProfile(decoded).then(elevations => {
-          if (elevations.length > 0) {
-            setElevationInfo(analyseElevation(elevations, mobilityAid));
-          }
-        });
       }
     } catch (e) { console.error(e); }
     finally { setRouting(false); }
@@ -353,32 +354,40 @@ function MapPageInner() {
 
             {/* Route summary */}
             {routeSummary && (
-              <div className="space-y-1.5">
-                <div className="bg-teal-50 rounded-xl px-4 py-2.5 flex items-center justify-between">
-                  <div>
-                    <p className="text-teal-700 font-semibold text-sm">🚶 {fmt.t(routeSummary.time)}</p>
-                    <p className="text-teal-500 text-xs">{fmt.d(routeSummary.distance)} walking route</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-xs text-teal-600 font-medium">
-                      {reports.length > 0 ? `⚠️ ${reports.length} flags nearby` : "✅ Route looks clear"}
-                    </p>
-                    {elevationInfo && (
-                      <p className="text-xs text-gray-500 mt-0.5">
-                        ⛰ Max slope: {elevationInfo.maxGradient.toFixed(0)}% · +{elevationInfo.totalAscent.toFixed(0)}m
-                      </p>
-                    )}
-                  </div>
+            <div className="bg-brand-50 rounded-xl px-4 py-2.5 space-y-1.5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-brand-700 font-semibold text-sm">🚶 {fmt.t(routeSummary.time)}</p>
+                  <p className="text-brand-500 text-xs">{fmt.d(routeSummary.distance)} walking</p>
                 </div>
-
-                {/* Elevation warning — shown if steep */}
-                {elevationInfo?.warning && (
-                  <div className={`rounded-xl px-3 py-2 border text-xs font-medium ${elevColour}`}>
-                    {elevationInfo.warning}
-                  </div>
-                )}
+                <p className="text-xs text-brand-600 font-medium">
+                  {reports.length > 0 ? `⚠️ ${reports.length} flags nearby` : "✅ Route looks clear"}
+                </p>
               </div>
-            )}
+              {routeSummary.terrain && (
+                <div className="flex gap-2 flex-wrap pt-0.5">
+                  <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${
+                    routeSummary.terrain.classification === "flat"   ? "bg-green-100 text-green-700" :
+                    routeSummary.terrain.classification === "gentle" ? "bg-yellow-100 text-yellow-700" :
+                                                                        "bg-red-100 text-red-700"
+                  }`}>
+                    {routeSummary.terrain.classification === "flat"   ? "⟷ Mostly flat" :
+                    routeSummary.terrain.classification === "gentle" ? "⤴ Gentle slopes" : "⬆ Steep"}
+                  </span>
+                  {routeSummary.terrain.maxGradientPercent > 0 && (
+                    <span className="text-[11px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 font-medium">
+                      Max {routeSummary.terrain.maxGradientPercent}% grade
+                    </span>
+                  )}
+                  {routeSummary.terrain.totalAscent > 2 && (
+                    <span className="text-[11px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 font-medium">
+                      ↑ {routeSummary.terrain.totalAscent}m ascent
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
           </div>
         )}
       </div>

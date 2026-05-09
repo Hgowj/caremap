@@ -48,7 +48,7 @@ export default function SettingsPage() {
       const { latitude: lat, longitude: lng } = pos.coords;
       try {
         const res  = await fetch(`/api/reverse-geocode?lat=${lat}&lng=${lng}`);
-        const data = await res.json();
+        const data = await res.json() as any;
         const addr = data.address?.ADDRESS ?? `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
         save({ homeAddress: addr, homeLat: String(lat), homeLng: String(lng) });
       } catch {

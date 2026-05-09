@@ -48,7 +48,7 @@ export default function ReportModal({ lat, lng, onClose, onSubmit }: ReportModal
     setLocating(true);
     try {
       const res  = await fetch(`/api/reverse-geocode?lat=${la}&lng=${lo}`);
-      const data = await res.json();
+      const data = await res.json() as any;
       if (data.address) {
         const label = data.address.BUILDING !== "NIL"
           ? data.address.BUILDING

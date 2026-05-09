@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
       `https://www.onemap.gov.sg/api/public/revgeocode?location=${lat},${lng}&buffer=40&addressType=All`,
       { headers: { Authorization: token } }
     );
-    const data = await res.json();
+    const data = await res.json() as any as any;
     const info = data.GeocodeInfo?.[0];
 
     if (!info) return NextResponse.json({ address: null });

@@ -37,7 +37,7 @@ export async function getToiletsNearby(
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? "https://caremap.goh-jing-wen.workers.dev";
     const res = await fetch(`${baseUrl}/toilets.json`);
     if (!res.ok) throw new Error(`${res.status}`);
-    const all: any[] = await res.json();
+    const all: any[] = await res.json() as any;
     const radiusDeg = radiusMetres / 111320;
     return all
       .filter((t) => Math.sqrt((t.lat - lat) ** 2 + (t.lng - lng) ** 2) <= radiusDeg)
@@ -81,11 +81,11 @@ export async function getHawkerCentres(): Promise<HawkerCentre[]> {
       "https://api-open.data.gov.sg/v1/public/api/datasets/d_4a086da0a5553be1d89383cd90d07ecd/poll-download",
       { signal: AbortSignal.timeout(6000) }
     );
-    const pollJson = await pollRes.json();
+    const pollJson = await pollRes.json() as any;
     if (pollJson.code !== 0) throw new Error(pollJson.errMsg);
 
     const dlRes   = await fetch(pollJson.data.url, { signal: AbortSignal.timeout(10000) });
-    const geojson = await dlRes.json();
+    const geojson = await dlRes.json() as any;
 
     _hawkerCache = (geojson.features ?? [])
       .filter((f: any) => f.geometry?.coordinates && f.properties?.STATUS === "Existing")
