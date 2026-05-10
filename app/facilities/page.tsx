@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import BottomNav from "@/components/BottomNav";
 import { Search, Loader2, MapPin, Phone, Navigation, ChevronRight } from "lucide-react";
 
@@ -117,8 +118,15 @@ const HARDCODED: Partial<Record<SubCategory, Facility[]>> = {
   ],
 };
 
+const SUB_CAT_KEY: Record<SubCategory, string> = {
+  all: "all", gp: "gpClinics", polyclinic: "polyclinics", pharmacy: "pharmacies",
+  hospital: "hospitals", eldercare: "sac", gym: "gyms", activesg: "activeSG",
+  rc: "rcCC", park: "parks", toilet: "toilets", supermarket: "supermarkets",
+};
+
 export default function FacilitiesPage() {
   const router = useRouter();
+  const t = useTranslations("facilities");
   const [category, setCategory] = useState<Category>("medical");
   const [subCat, setSubCat]     = useState<SubCategory>("all");
   const [facilities, setFacilities] = useState<Facility[]>([]);
@@ -195,8 +203,8 @@ export default function FacilitiesPage() {
 
       {/* Header */}
       <div className="px-4 pt-12 pb-3 bg-white border-b border-gray-100 shrink-0">
-        <h1 className="font-bold text-xl text-gray-800">Facilities</h1>
-        <p className="text-sm text-gray-400 mt-0.5">Nearby facilities and services</p>
+        <h1 className="font-bold text-xl text-gray-800">{t("title")}</h1>
+        <p className="text-sm text-gray-400 mt-0.5">{t("subtitle")}</p>
       </div>
 
       {/* Category tabs */}
@@ -213,7 +221,7 @@ export default function FacilitiesPage() {
               }`}
             >
               <span>{c.icon}</span>
-              <span>{c.label}</span>
+              <span>{t(c.id)}</span>
             </button>
           ))}
         </div>
@@ -231,7 +239,7 @@ export default function FacilitiesPage() {
               }`}
             >
               <span>{s.icon}</span>
-              <span>{s.label}</span>
+              <span>{t(SUB_CAT_KEY[s.id as SubCategory])}</span>
             </button>
           ))}
         </div>
@@ -245,7 +253,7 @@ export default function FacilitiesPage() {
             type="text"
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder={`Search ${CATEGORIES.find(c => c.id === category)?.label.toLowerCase() ?? "facilities"}...`}
+            placeholder={`Search ${t(category).toLowerCase()}...`}
             className="flex-1 bg-transparent text-sm text-gray-700 placeholder:text-gray-400 outline-none"
           />
         </div>
@@ -260,12 +268,12 @@ export default function FacilitiesPage() {
         ) : filtered.length === 0 ? (
           <div className="text-center py-16 px-6">
             <p className="text-3xl mb-3">{CATEGORIES.find(c => c.id === category)?.icon}</p>
-            <p className="text-gray-500 font-medium">No facilities found</p>
-            <p className="text-gray-400 text-xs mt-1">Try a different filter or search term</p>
+            <p className="text-gray-500 font-medium">{t("noResults")}</p>
+            <p className="text-gray-400 text-xs mt-1">{t("noResultsSub")}</p>
           </div>
         ) : (
           <>
-            <p className="text-xs text-gray-400 px-1 pb-1">{filtered.length} result{filtered.length !== 1 ? "s" : ""}</p>
+            <p className="text-xs text-gray-400 px-1 pb-1">{filtered.length} {filtered.length === 1 ? t("result") : t("results")}</p>
             {filtered.map(f => (
               <div key={f.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
                 <div className="flex items-start gap-3">
@@ -278,7 +286,7 @@ export default function FacilitiesPage() {
                       {f.badge && (
                         <span className={`text-[10px] px-1.5 py-0.5 rounded-md font-medium flex-shrink-0 ${
                           f.badge === "Public" ? "bg-blue-50 text-blue-600" : "bg-purple-50 text-purple-600"
-                        }`}>{f.badge}</span>
+                        }`}>{f.badge === "Public" ? t("public") : f.badge === "Private" ? t("private") : f.badge}</span>
                       )}
                     </div>
                     {f.address && (
@@ -296,7 +304,7 @@ export default function FacilitiesPage() {
                         className="flex items-center gap-1.5 text-xs font-semibold text-white bg-brand-500 hover:bg-brand-600 px-3 py-1.5 rounded-lg transition-all"
                       >
                         <Navigation size={11} />
-                        Navigate
+                        {t("navigate")}
                       </button>
                       <span className="text-xs text-gray-400">{f.type}</span>
                     </div>

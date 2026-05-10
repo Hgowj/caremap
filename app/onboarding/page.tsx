@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Check, Eye, EyeOff, Loader2, MapPin, X } from "lucide-react";
 
 type Step = "account" | "who" | "prefs";
@@ -18,6 +19,7 @@ interface HomeLocation {
 
 export default function OnboardingPage() {
   const router = useRouter();
+  const t = useTranslations("onboarding");
   const [step, setStep] = useState<Step>("account");
 
   // Account
@@ -142,8 +144,8 @@ export default function OnboardingPage() {
       </div>
 
       <div className="flex items-center justify-between px-5 pt-5 pb-1">
-        <span className="text-xs text-gray-400 font-medium">Step {stepNum} of 3</span>
-        <button onClick={() => router.push("/map")} className="text-xs text-gray-400 hover:text-gray-600">Skip</button>
+        <span className="text-xs text-gray-400 font-medium">{t("step")} {stepNum} {t("of")} 3</span>
+        <button onClick={() => router.push("/map")} className="text-xs text-gray-400 hover:text-gray-600">{t("skip")}</button>
       </div>
 
       <div className="px-5 pt-3 pb-5">
@@ -154,10 +156,10 @@ export default function OnboardingPage() {
       {step === "account" && (
         <div className="flex-1 flex flex-col px-5">
           <h2 className="text-2xl font-bold text-gray-900 mb-1">
-            {isLogin ? "Welcome back" : "Create your account"}
+            {isLogin ? t("welcomeBack") : t("createAccount")}
           </h2>
           <p className="text-sm text-gray-500 mb-6">
-            {isLogin ? "Log in to access your saved routes and preferences." : "Save your routes, bookmarks, and preferences across devices."}
+            {isLogin ? t("loginSub") : t("saveRoutesSub")}
           </p>
 
           <div className="space-y-3">
@@ -165,7 +167,7 @@ export default function OnboardingPage() {
               type="email"
               value={email}
               onChange={e => setEmail(e.target.value)}
-              placeholder="Email address"
+              placeholder={t("emailPlaceholder")}
               className="w-full px-4 py-3.5 rounded-2xl border-2 border-gray-100 bg-gray-50 text-sm outline-none focus:border-brand-400 focus:bg-white transition-all"
             />
             <div className="relative">
@@ -173,7 +175,7 @@ export default function OnboardingPage() {
                 type={showPw ? "text" : "password"}
                 value={password}
                 onChange={e => setPassword(e.target.value)}
-                placeholder="Password (min 6 characters)"
+                placeholder={t("passwordPlaceholder")}
                 onKeyDown={e => e.key === "Enter" && handleAuth()}
                 className="w-full px-4 py-3.5 rounded-2xl border-2 border-gray-100 bg-gray-50 text-sm outline-none focus:border-brand-400 focus:bg-white transition-all pr-12"
               />
@@ -193,14 +195,14 @@ export default function OnboardingPage() {
                 flex items-center justify-center gap-2"
             >
               {authLoading && <Loader2 size={16} className="animate-spin" />}
-              {isLogin ? "Log in" : "Create account"}
+              {isLogin ? t("loginBtn") : t("createAccountBtn")}
             </button>
 
             <button
               onClick={() => { setIsLogin(l => !l); setAuthError(""); }}
               className="w-full py-2 text-sm text-gray-500 hover:text-gray-700"
             >
-              {isLogin ? "Don't have an account? Sign up" : "Already have an account? Log in"}
+              {isLogin ? t("switchToSignup") : t("switchToLogin")}
             </button>
 
             <div className="flex items-center gap-3">
@@ -221,7 +223,7 @@ export default function OnboardingPage() {
                 }}
               className="w-full py-3 rounded-2xl border-2 border-gray-100 text-sm text-gray-500 hover:border-gray-200 transition-all"
             >
-              Continue as guest
+              {t("continueAsGuest")}
             </button>
           </div>
         </div>
@@ -230,13 +232,13 @@ export default function OnboardingPage() {
       {/* STEP 2: Who + Home location */}
       {step === "who" && (
         <div className="flex-1 flex flex-col px-5 overflow-y-auto">
-          <h2 className="text-2xl font-bold text-gray-900 mb-1">Who&apos;s using CareMap?</h2>
-          <p className="text-sm text-gray-500 mb-6">We&apos;ll tailor routes to the right needs</p>
+          <h2 className="text-2xl font-bold text-gray-900 mb-1">{t("whoUsing")}</h2>
+          <p className="text-sm text-gray-500 mb-6">{t("whoUsingSub")}</p>
 
           <div className="space-y-3 mb-6">
             {[
-              { id: "caregiver", label: "Caregiver",      sub: "I help someone get around", icon: "🤝" },
-              { id: "other",     label: "Other / General", sub: "Accessibility-conscious user", icon: "👤" },
+              { id: "caregiver", label: t("caregiver"), sub: t("caregiverSub"), icon: "🤝" },
+              { id: "other",     label: t("other"),     sub: t("otherSub"),     icon: "👤" },
             ].map(opt => (
               <button
                 key={opt.id}
@@ -257,8 +259,8 @@ export default function OnboardingPage() {
 
           {/* Home location */}
           <div className="mb-6">
-            <p className="text-sm font-semibold text-gray-800 mb-1">Your home location</p>
-            <p className="text-xs text-gray-500 mb-3">We&apos;ll use this as a quick-pick starting point for routes.</p>
+            <p className="text-sm font-semibold text-gray-800 mb-1">{t("homeLocation")}</p>
+            <p className="text-xs text-gray-500 mb-3">{t("homeLocationSub")}</p>
 
             <div className="relative">
               <div className="flex items-center gap-2 bg-gray-50 border-2 border-gray-100 rounded-2xl px-3 py-3 focus-within:border-brand-400 focus-within:bg-white transition-all">
@@ -267,7 +269,7 @@ export default function OnboardingPage() {
                   type="text"
                   value={homeQuery}
                   onChange={e => searchHome(e.target.value)}
-                  placeholder="Search your home address or block..."
+                  placeholder={t("searchHomeAddress")}
                   className="flex-1 bg-transparent text-sm text-gray-700 placeholder:text-gray-400 outline-none"
                 />
                 {homeSearching && <Loader2 size={14} className="animate-spin text-brand-500 flex-shrink-0" />}
@@ -300,7 +302,7 @@ export default function OnboardingPage() {
             {homeLocation && (
               <div className="mt-2 flex items-center gap-2 text-xs text-brand-600 bg-brand-50 px-3 py-2 rounded-xl">
                 <MapPin size={12} />
-                <span className="truncate">Saved: {homeLocation.label}</span>
+                <span className="truncate">{t("saved")}: {homeLocation.label}</span>
               </div>
             )}
           </div>
@@ -311,7 +313,7 @@ export default function OnboardingPage() {
               disabled={!userType}
               className="w-full py-4 rounded-2xl bg-brand-500 text-white font-semibold text-sm disabled:opacity-40 hover:bg-brand-600 active:scale-[0.98] transition-all"
             >
-              Continue
+              {t("continue")}
             </button>
           </div>
         </div>
@@ -320,16 +322,16 @@ export default function OnboardingPage() {
       {/* STEP 3: Preferences */}
       {step === "prefs" && (
         <div className="flex-1 flex flex-col px-5 overflow-y-auto">
-          <h2 className="text-2xl font-bold text-gray-900 mb-1">Your preferences</h2>
-          <p className="text-sm text-gray-500 mb-6">Change these any time in Settings.</p>
+          <h2 className="text-2xl font-bold text-gray-900 mb-1">{t("yourPreferences")}</h2>
+          <p className="text-sm text-gray-500 mb-6">{t("yourPreferencesSub")}</p>
 
-          <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-3">Your Companion</p>
+          <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-3">{t("yourCompanion")}</p>
           <div className="space-y-2 mb-6">
             {[
-              { id: "walks",      label: "Walks slowly or needs support", sub: "Frail, unsteady, or easily tired",  icon: "🚶" },
-              { id: "wheelchair", label: "Uses a wheelchair",              sub: "I push or guide it",                icon: "♿" },
-              { id: "frame",      label: "Uses a walking frame",           sub: "Rollator or zimmer frame",          icon: "🦯" },
-              { id: "scooter",    label: "Uses a mobility scooter",        sub: "Electric scooter or power chair",   icon: "🛵" },
+              { id: "walks",      label: t("walks"),      sub: t("walksSub"),      icon: "🚶" },
+              { id: "wheelchair", label: t("wheelchair"),  sub: t("wheelchairSub"), icon: "♿" },
+              { id: "frame",      label: t("frame"),      sub: t("frameSub"),      icon: "🦯" },
+              { id: "scooter",    label: t("scooter"),    sub: t("scooterSub"),    icon: "🛵" },
             ].map(opt => (
               <button
                 key={opt.id}
@@ -348,11 +350,11 @@ export default function OnboardingPage() {
             ))}
           </div>
 
-          <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-3">Route Preferences</p>
+          <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-3">{t("routePreferences")}</p>
 
           <div className="mb-5">
-            <p className="text-sm font-semibold text-gray-800 mb-0.5">Hills and slopes</p>
-            <p className="text-xs text-gray-500 mb-3">Choose what suits your companion</p>
+            <p className="text-sm font-semibold text-gray-800 mb-0.5">{t("hillsSlopes")}</p>
+            <p className="text-xs text-gray-500 mb-3">{t("hillsSlopesSub")}</p>
             <div className="flex gap-2">
               {(["any", "gentle", "flat"] as const).map(s => (
                 <button key={s} onClick={() => setSlope(s)}
@@ -360,16 +362,16 @@ export default function OnboardingPage() {
                     slope === s ? "border-brand-500 bg-brand-500 text-white" : "border-gray-200 text-gray-600 bg-white hover:border-brand-300"
                   }`}
                 >
-                  {s === "flat" ? "Flat only" : s === "gentle" ? "Gentle slopes" : "Any is fine"}
+                  {s === "flat" ? t("flatOnly") : s === "gentle" ? t("gentleSlopes") : t("anyIsFine")}
                 </button>
               ))}
             </div>
           </div>
 
           {[
-            { key: "sheltered",      label: "Stay sheltered from rain",   sub: "Favour covered walkways",           val: sheltered,      set: setSheltered },
-            { key: "restStops",      label: "Rest stops along the way",   sub: "Show benches and seating",          val: restStops,      set: setRestStops },
-            { key: "washroomAccess", label: "Washroom access",            sub: "Show accessible toilets on route",  val: washroomAccess, set: setWashroomAccess },
+            { key: "sheltered",      label: t("stayShelteredLabel"), sub: t("stayShelteredSub"), val: sheltered,      set: setSheltered },
+            { key: "restStops",      label: t("restStopsLabel"),     sub: t("restStopsSub"),     val: restStops,      set: setRestStops },
+            { key: "washroomAccess", label: t("washroomAccessLabel"),sub: t("washroomAccessSub"),val: washroomAccess, set: setWashroomAccess },
           ].map(item => (
             <div key={item.key} className="flex items-center justify-between py-3.5 border-b border-gray-50 last:border-0">
               <div>
@@ -386,7 +388,7 @@ export default function OnboardingPage() {
 
           {washroomAccess && (
             <div className="mt-4 mb-2">
-              <p className="text-xs text-gray-500 mb-2">How often does your companion need one?</p>
+              <p className="text-xs text-gray-500 mb-2">{t("washroomFreqSub")}</p>
               <div className="flex gap-2">
                 {(["500", "1000", "1500"] as const).map(f => (
                   <button key={f} onClick={() => setWashroomFreq(f)}
@@ -394,7 +396,7 @@ export default function OnboardingPage() {
                       washroomFreq === f ? "border-brand-500 bg-brand-500 text-white" : "border-gray-200 text-gray-600 bg-white hover:border-brand-300"
                     }`}
                   >
-                    Every {f === "500" ? "500m" : f === "1000" ? "1km" : "1.5km"}
+                    {f === "500" ? t("every500m") : f === "1000" ? t("every1km") : t("every1_5km")}
                   </button>
                 ))}
               </div>
@@ -405,7 +407,7 @@ export default function OnboardingPage() {
             <button onClick={handleFinish}
               className="w-full py-4 rounded-2xl bg-brand-500 text-white font-semibold text-sm hover:bg-brand-600 active:scale-[0.98] transition-all"
             >
-              Save and start
+              {t("saveAndStart")}
             </button>
           </div>
         </div>

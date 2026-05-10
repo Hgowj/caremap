@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { AlertTriangle, Clock, ThumbsUp, Plus, MapPin, MessageCircle, ChevronDown, ChevronUp } from "lucide-react";
 import BottomNav from "@/components/BottomNav";
 import ReportModal from "@/components/ReportModal";
@@ -21,6 +22,7 @@ interface Comment {
 const commentStore: Comment[] = [];
 
 export default function NotesPage() {
+  const t = useTranslations("notes");
   const [reports, setReports]           = useState<CommunityReport[]>([]);
   const [loading, setLoading]           = useState(true);
   const [showModal, setShowModal]       = useState(false);
@@ -87,14 +89,14 @@ export default function NotesPage() {
       <div className="px-4 pt-12 pb-4 bg-white border-b border-gray-100 shrink-0">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="font-display font-bold text-xl text-gray-800">Notes</h1>
-            <p className="text-sm text-gray-400 mt-0.5">Community-reported conditions</p>
+            <h1 className="font-display font-bold text-xl text-gray-800">{t("title")}</h1>
+            <p className="text-sm text-gray-400 mt-0.5">{t("subtitle")}</p>
           </div>
           <button
             onClick={() => setShowModal(true)}
             className="flex items-center gap-1.5 bg-brand-500 hover:bg-brand-600 text-white text-xs font-semibold px-3 py-2 rounded-xl transition-all"
           >
-            <Plus size={14} /> Add Note
+            <Plus size={14} /> {t("addNote")}
           </button>
         </div>
       </div>
@@ -108,10 +110,8 @@ export default function NotesPage() {
         ) : reports.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full px-6 text-center">
             <p className="text-4xl mb-3">✅</p>
-            <p className="text-gray-600 font-medium">No active notes</p>
-            <p className="text-gray-400 text-sm mt-1">
-              Tap <strong>Add Note</strong> above or the flag icon on the map.
-            </p>
+            <p className="text-gray-600 font-medium">{t("noNotes")}</p>
+            <p className="text-gray-400 text-sm mt-1">{t("noNotesSub")}</p>
           </div>
         ) : (
           <div className="px-4 py-4 space-y-3">
@@ -149,7 +149,7 @@ export default function NotesPage() {
                               className="flex items-center gap-1 text-xs text-gray-400 hover:text-brand-600 transition-colors"
                             >
                               <MessageCircle size={11} />
-                              <span>{rComments.length > 0 ? `${rComments.length} comment${rComments.length !== 1 ? "s" : ""}` : "Comment"}</span>
+                              <span>{rComments.length > 0 ? `${rComments.length} comment${rComments.length !== 1 ? "s" : ""}` : t("comment")}</span>
                               {isExpanded ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
                             </button>
                           </div>
@@ -171,7 +171,7 @@ export default function NotesPage() {
                   {isExpanded && (
                     <div className="border-t border-gray-50 bg-gray-50 px-4 py-3 space-y-2">
                       {rComments.length === 0 ? (
-                        <p className="text-xs text-gray-400 text-center py-1">No comments yet. Be the first to update.</p>
+                        <p className="text-xs text-gray-400 text-center py-1">{t("noComments")}</p>
                       ) : (
                         rComments.map(c => (
                           <div key={c.id} className="bg-white rounded-xl px-3 py-2">
@@ -187,7 +187,7 @@ export default function NotesPage() {
                           value={commentText}
                           onChange={e => setCommentText(e.target.value)}
                           onKeyDown={e => e.key === "Enter" && addComment(r.id)}
-                          placeholder='e.g. "Elevator still not working as of 3pm"'
+                          placeholder={t("commentPlaceholder")}
                           className="flex-1 text-xs bg-white border border-gray-200 rounded-xl px-3 py-2 outline-none focus:border-brand-400"
                         />
                         <button
@@ -195,7 +195,7 @@ export default function NotesPage() {
                           disabled={!commentText.trim()}
                           className="shrink-0 bg-brand-500 disabled:opacity-40 text-white text-xs font-medium px-3 py-2 rounded-xl"
                         >
-                          Post
+                          {t("post")}
                         </button>
                       </div>
                     </div>

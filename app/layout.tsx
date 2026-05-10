@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
+import { NextIntlClientProvider } from "next-intl";
+import { getMessages } from "next-intl/server";
 import "./globals.css";
 
 const inter = Inter({
@@ -22,7 +24,9 @@ export const viewport: Viewport = {
   maximumScale: 1,
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const messages = await getMessages();
+
   return (
     <html lang="en" className={inter.variable}>
       <head>
@@ -31,12 +35,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="mobile-web-app-capable" content="yes" />
       </head>
       <body className="font-sans bg-gray-100 antialiased">
-        <div
-          className="w-full bg-white relative overflow-hidden md:max-w-[430px] md:mx-auto md:shadow-2xl"
-          style={{ height: "100dvh" }}
-        >
-          {children}
-        </div>
+        <NextIntlClientProvider messages={messages}>
+          <div
+            className="w-full bg-white relative overflow-hidden md:max-w-[430px] md:mx-auto md:shadow-2xl"
+            style={{ height: "100dvh" }}
+          >
+            {children}
+          </div>
+        </NextIntlClientProvider>
       </body>
     </html>
   );

@@ -27,7 +27,16 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    const url = `https://www.onemap.gov.sg/api/public/routingsvc/route?start=${startLat},${startLng}&end=${endLat},${endLng}&routeType=${mode}`;
+    const date = new Date();
+    const mm = String(date.getMonth() + 1).padStart(2, "0");
+    const dd = String(date.getDate()).padStart(2, "0");
+    const yyyy = date.getFullYear();
+    const dateStr = `${mm}-${dd}-${yyyy}`;
+    const timeStr = `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}:00`;
+
+    const url = mode === "pt"
+      ? `https://www.onemap.gov.sg/api/public/routingsvc/route?start=${startLat},${startLng}&end=${endLat},${endLng}&routeType=pt&date=${dateStr}&time=${timeStr}&mode=TRANSIT&maxWalkDistance=500`
+      : `https://www.onemap.gov.sg/api/public/routingsvc/route?start=${startLat},${startLng}&end=${endLat},${endLng}&routeType=${mode === "drive" ? "drive" : "walk"}`;
     console.log("[Route] Calling:", url);
 
     const res  = await fetch(url, { headers: { Authorization: token } });

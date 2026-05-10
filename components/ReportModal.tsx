@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import { X, MapPin, Loader2, ChevronRight } from "lucide-react";
 import type { ReportCategory } from "@/lib/reports";
 
@@ -29,6 +30,7 @@ interface ReportModalProps {
 type Step = "location" | "category" | "details" | "done";
 
 export default function ReportModal({ lat, lng, onClose, onSubmit }: ReportModalProps) {
+  const t = useTranslations("reportModal");
   const [step, setStep]               = useState<Step>("location");
   const [resolvedLocation, setResolved] = useState<string>("");
   const [locating, setLocating]       = useState(false);
@@ -126,7 +128,7 @@ export default function ReportModal({ lat, lng, onClose, onSubmit }: ReportModal
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h2 className="font-display font-semibold text-gray-800 text-lg">Add a note</h2>
+            <h2 className="font-display font-semibold text-gray-800 text-lg">{t("title")}</h2>
             {/* Step indicator */}
             <div className="flex items-center gap-1 mt-1">
               {(["location","category","details"] as Step[]).map((s, i) => (
@@ -159,7 +161,7 @@ export default function ReportModal({ lat, lng, onClose, onSubmit }: ReportModal
                     : "border-gray-200 text-gray-600"
                 }`}
               >
-                📍 Use my location
+                {t("useMyLocation")}
               </button>
               <button
                 onClick={() => setLocationMode("search")}
@@ -169,7 +171,7 @@ export default function ReportModal({ lat, lng, onClose, onSubmit }: ReportModal
                     : "border-gray-200 text-gray-600"
                 }`}
               >
-                🔍 Search location
+                {t("searchLocation")}
               </button>
             </div>
 
@@ -213,7 +215,7 @@ export default function ReportModal({ lat, lng, onClose, onSubmit }: ReportModal
                   type="text"
                   value={searchQuery}
                   onChange={e => handleSearch(e.target.value)}
-                  placeholder="Search for a location…"
+                  placeholder={t("searchPlaceholder")}
                   className="w-full text-sm border-2 border-gray-100 rounded-xl px-3 py-2.5 text-gray-700 placeholder:text-gray-300 outline-none focus:border-brand-400"
                 />
                 {searchResults.length > 0 && (
@@ -328,7 +330,7 @@ export default function ReportModal({ lat, lng, onClose, onSubmit }: ReportModal
               disabled={submitting}
               className="w-full py-3 rounded-2xl text-white font-semibold text-sm bg-brand-600 hover:bg-brand-700 disabled:opacity-50 flex items-center justify-center gap-2 transition-all"
             >
-              {submitting ? <><Loader2 size={15} className="animate-spin" /> Submitting…</> : "Save note"}
+              {submitting ? <><Loader2 size={15} className="animate-spin" /> Submitting…</> : t("saveNote")}
             </button>
           </div>
         )}
