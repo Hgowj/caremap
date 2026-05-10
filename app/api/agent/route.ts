@@ -1,16 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 
-const SYSTEM_PROMPT = `You are CareMap, an accessible navigation assistant for caregivers and seniors in Singapore.
-You help users find toilets, medical facilities, hawker centres, and accessible routes.
+const SYSTEM_PROMPT = `You are CareMap, a helpful and friendly accessible navigation assistant for caregivers and seniors in Singapore.
+You help users find toilets, medical facilities, hawker centres, gyms, eldercare centres, and accessible routes.
 Always respond in the same language the user wrote in.
-You have access to these tools:
-- find_toilets(lat, lng, radius): finds nearby accessible toilets
-- find_facilities(type, lat, lng): finds nearby facilities (medical/eldercare/gym/hawker)
-- get_route(startLat, startLng, endLat, endLng, mode): gets walking/transit route
-
-When a user asks to navigate somewhere, always confirm the destination before routing.
-Keep responses concise and friendly. Use the user's language throughout.`;
+Keep responses concise, warm, and practical — 2-4 sentences maximum.
+When you find nearby places, list them clearly with distances.
+If the user asks to navigate somewhere, confirm the destination and suggest they use the route planner.`;
 
 interface AgentMessage {
   role: "user" | "assistant";
@@ -18,114 +14,353 @@ interface AgentMessage {
 }
 
 interface AgentRequest {
-  message: string;
-  history: AgentMessage[];
-  userLat?: number;
-  userLng?: number;
+  message:   string;
+  history:   AgentMessage[];
+  userLat?:  number;
+  userLng?:  number;
   language?: string;
 }
 
-export async function POST(req: NextRequest) {
-  const { env } = await getCloudflareContext({ async: true });
-  const ai = env.AI;
+// ── Keyword-based intent detection (works without AI) ────────────────────────
+function detectIntent(message: string): {
+  intent:        "FIND_TOILET" | "FIND_FACILITY" | "GET_ROUTE" | "GENERAL_CHAT";
+  facility_type: string;
+  destination:   string;
+} {
+  const m = message.toLowerCase();
 
-  if (!ai) return NextResponse.json({ error: "AI not available" }, { status: 500 });
+  // Toilet keywords — EN, ZH, TH, TL, TA
+  if (
+    m.includes("toilet") || m.includes("washroom") || m.includes("restroom") ||
+    m.includes("bathroom") || m.includes("loo") || m.includes("wc") ||
+    m.includes("厕所") || m.includes("洗手间") || m.includes("卫生间") ||
+    m.includes("ห้องน้ำ") || m.includes("banyo") || m.includes("cr") ||
+    m.includes("கழிவறை") || m.includes("கழிப்பறை")
+  ) {
+    return { intent: "FIND_TOILET", facility_type: "toilet", destination: "" };
+  }
 
-  const body = await req.json() as AgentRequest;
-  const { message, history = [], userLat = 1.3521, userLng = 103.8198 } = body;
+  // Medical keywords
+  if (
+    m.includes("clinic") || m.includes("doctor") || m.includes("gp") ||
+    m.includes("hospital") || m.includes("pharmacy") || m.includes("medicine") ||
+    m.includes("medical") || m.includes("polyclinic") || m.includes("health") ||
+    m.includes("诊所") || m.includes("医院") || m.includes("药房") || m.includes("医生") ||
+    m.includes("คลินิก") || m.includes("โรงพยาบาล") || m.includes("หมอ") ||
+    m.includes("ospital") || m.includes("botika") || m.includes("doktor") ||
+    m.includes("மருத்துவ") || m.includes("மருந்தக") || m.includes("மருத்துவர்")
+  ) {
+    return { intent: "FIND_FACILITY", facility_type: "medical", destination: "" };
+  }
 
-  // Step 1: Use SEA-Lion to understand intent and generate response
-  const messages = [
-    { role: "system" as const, content: SYSTEM_PROMPT },
-    ...history.slice(-6), // keep last 3 exchanges for context
-    { role: "user" as const, content: message },
-  ];
+  // Hawker / food keywords
+  if (
+    m.includes("hawker") || m.includes("food") || m.includes("eat") ||
+    m.includes("hungry") || m.includes("restaurant") || m.includes("canteen") ||
+    m.includes("吃") || m.includes("食") || m.includes("小贩") || m.includes("饭") ||
+    m.includes("อาหาร") || m.includes("กิน") || m.includes("ร้านอาหาร") ||
+    m.includes("pagkain") || m.includes("kain") || m.includes("carinderia") ||
+    m.includes("சாப்பிட") || m.includes("உணவு")
+  ) {
+    return { intent: "FIND_FACILITY", facility_type: "hawker", destination: "" };
+  }
+
+  // Eldercare keywords
+  if (
+    m.includes("eldercare") || m.includes("senior") || m.includes("elderly") ||
+    m.includes("activity centre") || m.includes("sac") || m.includes("老人") ||
+    m.includes("乐龄") || m.includes("ผู้สูงอายุ") || m.includes("matatanda") ||
+    m.includes("முதியோர்")
+  ) {
+    return { intent: "FIND_FACILITY", facility_type: "eldercare", destination: "" };
+  }
+
+  // Gym keywords
+  if (
+    m.includes("gym") || m.includes("exercise") || m.includes("fitness") ||
+    m.includes("workout") || m.includes("健身") || m.includes("ฟิตเนส") ||
+    m.includes("gym") || m.includes("உடற்பயிற்சி")
+  ) {
+    return { intent: "FIND_FACILITY", facility_type: "gyms", destination: "" };
+  }
+
+  // Route / navigation keywords
+  if (
+    m.includes("route") || m.includes("navigate") || m.includes("direction") ||
+    m.includes("how to get") || m.includes("how do i get") || m.includes("walk to") ||
+    m.includes("go to") || m.includes("路线") || m.includes("怎么去") ||
+    m.includes("เส้นทาง") || m.includes("ไปที่") || m.includes("ruta") ||
+    m.includes("பாதை") || m.includes("வழி")
+  ) {
+    return { intent: "GET_ROUTE", facility_type: "", destination: "" };
+  }
+
+  return { intent: "GENERAL_CHAT", facility_type: "", destination: "" };
+}
+
+// ── Haversine distance in metres ─────────────────────────────────────────────
+function distanceMetres(
+  lat1: number, lng1: number,
+  lat2: number, lng2: number
+): number {
+  const R    = 6371000;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a    =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1 * Math.PI / 180) *
+    Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function formatDist(m: number): string {
+  return m >= 1000 ? `${(m / 1000).toFixed(1)}km` : `${Math.round(m)}m`;
+}
+
+// ── Tool: find toilets ────────────────────────────────────────────────────────
+async function findToilets(
+  lat: number,
+  lng: number,
+  baseUrl: string
+): Promise<string> {
+  try {
+    const res  = await fetch(
+      `${baseUrl}/api/pois?lat=${lat}&lng=${lng}&radius=600&types=toilet`,
+      { signal: AbortSignal.timeout(8000) }
+    );
+    const data = await res.json() as any;
+    const list = (data.toilets ?? []) as Array<{
+      name: string; lat: number; lng: number;
+      hasHandicap: boolean; isFree: boolean;
+    }>;
+
+    if (list.length === 0) return "No public toilets found within 600m.";
+
+    const top = list
+      .map(t => ({
+        ...t,
+        dist: distanceMetres(lat, lng, t.lat, t.lng),
+      }))
+      .sort((a, b) => a.dist - b.dist)
+      .slice(0, 3);
+
+    const lines = top.map(t => {
+      const tags = [
+        t.hasHandicap ? "♿ accessible" : "",
+        t.isFree      ? "free"          : "",
+      ].filter(Boolean).join(", ");
+      return `• ${t.name} — ${formatDist(t.dist)} away${tags ? ` (${tags})` : ""}`;
+    });
+
+    return `Found ${list.length} toilet${list.length !== 1 ? "s" : ""} nearby. Closest:\n${lines.join("\n")}`;
+  } catch (err) {
+    console.error("[Agent] findToilets error:", err);
+    return "I couldn't fetch toilet data right now. Please try the 🚽 map layer instead.";
+  }
+}
+
+// ── Tool: find facilities ─────────────────────────────────────────────────────
+async function findFacilities(
+  facilityType: string,
+  lat: number,
+  lng: number,
+  baseUrl: string
+): Promise<string> {
+  const typeMap: Record<string, string> = {
+    medical:  "chas",
+    hawker:   "hawker",
+    eldercare:"eldercare",
+    gyms:     "gyms",
+    pharmacy: "pharmacy",
+  };
+
+  const apiType = typeMap[facilityType] ?? facilityType;
+  const typeLabel: Record<string, string> = {
+    chas:      "GP clinic",
+    hawker:    "hawker centre",
+    eldercare: "eldercare centre",
+    gyms:      "gym",
+    pharmacy:  "pharmacy",
+  };
 
   try {
-    // First pass: detect intent
-    const intentResponse = await ai.run("@cf/meta/llama-3.1-8b-instruct", {
-      messages: [
-        {
-          role: "system",
-          content: `You are an intent classifier for CareMap navigation app. 
-Classify the user message into one of: FIND_TOILET, FIND_FACILITY, GET_ROUTE, GENERAL_CHAT.
-Also extract: facility_type (toilet/medical/eldercare/gym/hawker), destination_name if mentioned.
-Respond ONLY with JSON: {"intent": "...", "facility_type": "...", "destination": "..."}`,
-        },
-        { role: "user", content: message },
-      ],
-      max_tokens: 100,
-    }) as any;
+    let list: Array<{ name: string; address: string; lat: number; lng: number }> = [];
 
-    let intent = { intent: "GENERAL_CHAT", facility_type: "", destination: "" };
-    try {
-      const intentText = intentResponse.response ?? "";
-      const jsonMatch = intentText.match(/\{[\s\S]*?\}/);
-      if (jsonMatch) intent = JSON.parse(jsonMatch[0]);
-    } catch {}
+    if (apiType === "hawker") {
+      const res  = await fetch(
+        `${baseUrl}/api/pois?lat=${lat}&lng=${lng}&types=hawker`,
+        { signal: AbortSignal.timeout(8000) }
+      );
+      const data = await res.json() as any;
+      list = data.hawkerCentres ?? [];
+    } else {
+      const res  = await fetch(
+        `${baseUrl}/api/facilities?types=${apiType}`,
+        { signal: AbortSignal.timeout(10000) }
+      );
+      const data = await res.json() as any;
+      list = data[apiType] ?? [];
+    }
+
+    if (list.length === 0) {
+      return `No ${typeLabel[apiType] ?? facilityType}s found nearby.`;
+    }
+
+    const top = list
+      .filter(f => f.lat && f.lng)
+      .map(f => ({ ...f, dist: distanceMetres(lat, lng, f.lat, f.lng) }))
+      .sort((a, b) => a.dist - b.dist)
+      .slice(0, 3);
+
+    const label  = typeLabel[apiType] ?? facilityType;
+    const lines  = top.map(f =>
+      `• ${f.name}${f.address ? ` (${f.address})` : ""} — ${formatDist(f.dist)} away`
+    );
+
+    return `Found ${list.length} ${label}${list.length !== 1 ? "s" : ""} nearby. Closest:\n${lines.join("\n")}`;
+  } catch (err) {
+    console.error("[Agent] findFacilities error:", err);
+    return `I couldn't fetch ${facilityType} data right now. Please check the Facilities page instead.`;
+  }
+}
+
+// ── Call Workers AI with timeout ──────────────────────────────────────────────
+async function callAI(
+  ai: any,
+  messages: AgentMessage[],
+  maxTokens = 300
+): Promise<string> {
+  const timeoutMs = 12000;
+
+  const aiPromise = ai.run("@cf/meta/llama-3.1-8b-instruct", {
+    messages,
+    max_tokens: maxTokens,
+  }) as Promise<{ response?: string }>;
+
+  const timeoutPromise = new Promise<never>((_, reject) =>
+    setTimeout(() => reject(new Error("AI_TIMEOUT")), timeoutMs)
+  );
+
+  const result = await Promise.race([aiPromise, timeoutPromise]);
+  return result?.response ?? "";
+}
+
+// ── Main handler ──────────────────────────────────────────────────────────────
+export async function POST(req: NextRequest) {
+  let body: AgentRequest;
+  try {
+    body = await req.json() as AgentRequest;
+  } catch {
+    return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
+  }
+
+  const {
+    message,
+    history  = [],
+    userLat  = 1.3521,
+    userLng  = 103.8198,
+    language = "en",
+  } = body;
+
+  if (!message?.trim()) {
+    return NextResponse.json({ error: "Empty message" }, { status: 400 });
+  }
+
+  const { env } = await getCloudflareContext({ async: true });
+  const ai      = (env as any).AI;
+  const baseUrl = (env as any).NEXT_PUBLIC_BASE_URL ?? "https://caremap.goh-jing-wen.workers.dev";
+
+  if (!ai) {
+    return NextResponse.json(
+      { response: "AI assistant is not available right now. Please try again later." },
+      { status: 200 }
+    );
+  }
+
+  try {
+    // Step 1: Detect intent (keyword first, AI as enhancement)
+    const intent = detectIntent(message);
+    console.log(`[Agent] Intent: ${intent.intent}, type: ${intent.facility_type}`);
 
     // Step 2: Execute tool based on intent
     let toolResult = "";
 
-    if (intent.intent === "FIND_TOILET" || intent.facility_type === "toilet") {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_BASE_URL}/api/pois?lat=${userLat}&lng=${userLng}&radius=500&types=toilet`
-      );
-      const data = await res.json() as any;
-      const toilets = (data.toilets ?? []).slice(0, 3);
-      if (toilets.length > 0) {
-        toolResult = `Found ${toilets.length} nearby toilets: ${toilets.map((t: any) =>
-          `${t.name} (${Math.round(Math.sqrt((t.lat - userLat)**2 + (t.lng - userLng)**2) * 111320)}m away${t.hasHandicap ? ", wheelchair accessible" : ""})`
-        ).join("; ")}`;
-      } else {
-        toolResult = "No toilets found within 500m.";
-      }
+    if (intent.intent === "FIND_TOILET") {
+      toolResult = await findToilets(userLat, userLng, baseUrl);
     } else if (intent.intent === "FIND_FACILITY" && intent.facility_type) {
-      const typeMap: Record<string, string> = {
-        medical: "chas", eldercare: "eldercare", gym: "gyms", hawker: "hawker",
-      };
-      const apiType = typeMap[intent.facility_type] ?? intent.facility_type;
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_BASE_URL}/api/facilities?types=${apiType}`
-      );
-      const data = await res.json() as any;
-      const items = (data[apiType] ?? []).slice(0, 3);
-      if (items.length > 0) {
-        toolResult = `Found nearby ${intent.facility_type}: ${items.map((f: any) => f.name).join(", ")}`;
-      }
+      toolResult = await findFacilities(intent.facility_type, userLat, userLng, baseUrl);
+    } else if (intent.intent === "GET_ROUTE") {
+      toolResult = "To get a route, please use the route planner on the map — tap 'Where would you like to go?' and I'll help you find the best accessible path!";
     }
 
-    // Step 3: Generate final response with SEA-Lion
-    const finalMessages = [
-      { role: "system" as const, content: SYSTEM_PROMPT },
-      ...history.slice(-4),
-      { role: "user" as const, content: message },
+    // Step 3: Build messages for AI response generation
+    const aiMessages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
+      { role: "system", content: SYSTEM_PROMPT },
+      ...history.slice(-4).map(m => ({
+        role:    m.role as "user" | "assistant",
+        content: m.content,
+      })),
+      { role: "user", content: message },
     ];
 
     if (toolResult) {
-      finalMessages.push({
-        role: "assistant" as const,
-        content: `[Tool result: ${toolResult}]`,
+      aiMessages.push({
+        role:    "assistant",
+        content: `[Data retrieved]: ${toolResult}`,
       });
-      finalMessages.push({
-        role: "user" as const,
-        content: "Based on that information, please respond to the user helpfully in their language.",
+      aiMessages.push({
+        role:    "user",
+        content: `Based on the data above, please give a helpful, friendly response in ${
+          language === "zh" ? "Mandarin Chinese" :
+          language === "th" ? "Thai" :
+          language === "tl" ? "Filipino/Tagalog" :
+          language === "ta" ? "Tamil" :
+          "English"
+        }. Be concise and practical.`,
       });
     }
 
-    const response = await ai.run("@cf/meta/llama-3.1-8b-instruct", {
-      messages: finalMessages,
-      max_tokens: 300,
-    }) as any;
+    // Step 4: Generate natural language response
+    let responseText = "";
+    try {
+      responseText = await callAI(ai, aiMessages as any, 300);
+    } catch (aiErr: any) {
+      console.error("[Agent] AI response error:", aiErr?.message ?? aiErr);
+
+      // If AI failed, return the tool result directly as a simple response
+      if (toolResult) {
+        responseText = toolResult;
+      } else {
+        const fallbacks: Record<string, string> = {
+          en: "I'm having a bit of trouble connecting right now. Please try again in a moment! 😊",
+          zh: "我现在连接有些困难。请稍后再试！😊",
+          th: "ฉันมีปัญหาในการเชื่อมต่อตอนนี้ กรุณาลองอีกครั้งในอีกสักครู่! 😊",
+          tl: "Nagkakaroon ako ng problema sa koneksyon ngayon. Pakisubukang muli sa sandali! 😊",
+          ta: "இப்போது இணைப்பில் சிறிய சிக்கல் உள்ளது. சற்று நேரம் கழித்து மீண்டும் முயற்சிக்கவும்! 😊",
+        };
+        responseText = fallbacks[language] ?? fallbacks.en;
+      }
+    }
+
+    // Ensure we always return something
+    if (!responseText.trim()) {
+      responseText = toolResult || "I'm not sure how to help with that. Try asking me to find a toilet, clinic, or hawker centre nearby!";
+    }
+
+    console.log(`[Agent] Response (${language}): ${responseText.slice(0, 100)}...`);
 
     return NextResponse.json({
-      response: response.response ?? "I'm sorry, I couldn't process that request.",
-      intent: intent.intent,
+      response:   responseText,
+      intent:     intent.intent,
       toolResult,
     });
 
-  } catch (err) {
-    console.error("[Agent] Error:", err);
-    return NextResponse.json({ error: "Agent error" }, { status: 500 });
+  } catch (err: any) {
+    console.error("[Agent] Unexpected error:", err?.message ?? err);
+    return NextResponse.json({
+      response: "Something went wrong. Please try again! 😊",
+      intent:   "GENERAL_CHAT",
+    });
   }
 }

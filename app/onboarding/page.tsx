@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useTranslations } from "@/hooks/useTranslations";
 import { Check, Eye, EyeOff, Loader2, MapPin, X } from "lucide-react";
 import AppShell from "@/components/AppShell";
 

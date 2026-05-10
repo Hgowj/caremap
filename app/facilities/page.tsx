@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useTranslations } from "@/hooks/useTranslations";
 import BottomNav from "@/components/BottomNav";
 import AppShell from "@/components/AppShell";
 import { Search, Loader2, MapPin, Phone, Navigation, ChevronRight } from "lucide-react";

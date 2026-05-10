@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useTranslations } from "@/hooks/useTranslations";
 import { AlertTriangle, Clock, ThumbsUp, Plus, MapPin, MessageCircle, ChevronDown, ChevronUp } from "lucide-react";
 import BottomNav from "@/components/BottomNav";
 import ReportModal from "@/components/ReportModal";

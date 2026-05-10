@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useTranslations } from "@/hooks/useTranslations";
 import { MapPin } from "lucide-react";
 import BottomNav from "@/components/BottomNav";
 import AppShell from "@/components/AppShell";

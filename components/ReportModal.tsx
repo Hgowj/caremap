@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useTranslations } from "next-intl";
+import { useTranslations } from "@/hooks/useTranslations";
 import { X, MapPin, Loader2, ChevronRight } from "lucide-react";
 import type { ReportCategory } from "@/lib/reports";
 

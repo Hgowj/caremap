@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useTranslations } from "@/hooks/useTranslations";
 import { Map, Building2, BookmarkCheck, StickyNote, Settings } from "lucide-react";
 
 const NAV = [

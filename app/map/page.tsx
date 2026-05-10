@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic";
 import { useState, useEffect, useCallback, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useTranslations } from "@/hooks/useTranslations";
 import {
   Loader2, Flag, MapPin, Crosshair, Clock,
   Search, ChevronLeft, ArrowUpDown, AlertCircle,
