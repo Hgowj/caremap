@@ -91,7 +91,7 @@ export default function SettingsPage() {
           <div className="text-center py-12">
             <p className="text-gray-400 text-sm">{t("noPrefs")}</p>
             <button
-              onClick={() => window.location.href = "/onboarding"}
+              onClick={() => window.location.href = "/onboarding?edit=true"}
               className="mt-3 text-sm text-brand-600 font-medium hover:underline"
             >
               {t("setupPrefs")}
@@ -141,7 +141,7 @@ export default function SettingsPage() {
                   </div>
                 </div>
                 <button
-                  onClick={() => window.location.href = "/onboarding"}
+                  onClick={() => window.location.href = "/onboarding?edit=true"}
                   className="text-xs text-brand-500 font-medium hover:underline"
                 >
                   {prefs.homeLocation ? t("edit") : t("set")}
@@ -176,7 +176,7 @@ export default function SettingsPage() {
 
             {/* Edit all */}
             <button
-              onClick={() => window.location.href = "/onboarding"}
+              onClick={() => window.location.href = "/onboarding?edit=true"}
               className="w-full py-3 rounded-2xl border-2 border-gray-100 text-sm text-gray-500 hover:border-gray-200 transition-all"
             >
               {t("editAll")}

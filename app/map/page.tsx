@@ -42,6 +42,7 @@ interface RecentLocation {
 interface RouteVariant {
   id:             "best" | "flattest" | "rest_stops" | "quickest";
   label:          string;
+  subtitle?:      string;
   badge?:         string;
   badgeGreen?:    boolean;
   time:           number;
@@ -268,7 +269,7 @@ function MapPageInner() {
 
       const variants: RouteVariant[] = [
         {
-          id: "best", label: "Best match", badge: "BEST FOR YOU", badgeGreen: true,
+          id: "best", label: "Best match", subtitle: "Safest & most accessible", badge: "BEST FOR YOU", badgeGreen: true,
           time: baseTime, distance: baseDist, terrain, shelterPercent: baseShelter,
           restStopCount: baseRestStops,
           washroomCount: baseWashrooms,
@@ -640,9 +641,14 @@ function MapPageInner() {
                 }`}
               >
                 <div className="flex items-start justify-between mb-1.5">
-                  <p className="font-bold text-gray-900">
-                    {v.id === "best" ? t("bestMatch") : v.id === "flattest" ? t("flattest") : v.id === "rest_stops" ? t("mostRestStops") : t("quickest")}
-                  </p>
+                  <div>
+                    <p className="font-bold text-gray-900">
+                      {v.id === "best" ? t("bestMatch") : v.id === "flattest" ? t("flattest") : v.id === "rest_stops" ? t("mostRestStops") : t("quickest")}
+                    </p>
+                    {v.subtitle && (
+                      <p className="text-xs text-brand-500 font-medium">{v.subtitle}</p>
+                    )}
+                  </div>
                   {v.badge && (
                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
                       v.badgeGreen ? "bg-brand-500 text-white" : "bg-amber-100 text-amber-700"
@@ -721,6 +727,23 @@ function MapPageInner() {
                 </div>
               ))}
             </div>
+
+            {/* Why this route — only for best match */}
+            {selectedVariant.id === "best" && (
+              <div className="bg-brand-50 border border-brand-100 rounded-2xl px-4 py-3">
+                <p className="text-xs font-semibold text-brand-700 mb-1">✦ Why this is the best match</p>
+                <p className="text-xs text-brand-600 leading-relaxed">
+                  This route balances terrain, shelter, and rest stop availability based on your
+                  {savedPrefs?.mobilityAid === "wheelchair" ? " wheelchair" :
+                   savedPrefs?.mobilityAid === "frame"      ? " walking frame" :
+                   savedPrefs?.mobilityAid === "scooter"    ? " mobility scooter" :
+                   " companion's"} needs
+                  {savedPrefs?.slope === "flat" ? ", avoids steep slopes" : ""}
+                  {savedPrefs?.sheltered ? ", maximises covered walkways" : ""}
+                  {savedPrefs?.washroomAccess ? ", and keeps toilets within reach" : ""}.
+                </p>
+              </div>
+            )}
 
             {selectedVariant.reportCount > 0 && (
               <div className="bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 flex items-start gap-3">

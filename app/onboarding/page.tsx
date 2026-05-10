@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "@/hooks/useTranslations";
 import { Check, Eye, EyeOff, Loader2, MapPin, X } from "lucide-react";
 import AppShell from "@/components/AppShell";
@@ -18,10 +18,17 @@ interface HomeLocation {
   lng: number;
 }
 
-export default function OnboardingPage() {
-  const router = useRouter();
-  const t = useTranslations("onboarding");
+function OnboardingPage() {
+  const router       = useRouter();
+  const searchParams = useSearchParams();
+  const t            = useTranslations("onboarding");
   const [step, setStep] = useState<Step>("account");
+
+  useEffect(() => {
+    if (searchParams.get("edit") === "true") {
+      setStep("prefs");
+    }
+  }, [searchParams]);
 
   // Account
   const [email, setEmail] = useState("");
@@ -416,5 +423,17 @@ export default function OnboardingPage() {
       )}
     </div>
     </AppShell>
+  );
+}
+
+export default function OnboardingPageWrapper() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center h-screen">
+        <div className="animate-spin w-6 h-6 border-2 border-brand-500 border-t-transparent rounded-full" />
+      </div>
+    }>
+      <OnboardingPage />
+    </Suspense>
   );
 }

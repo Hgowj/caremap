@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
+import toiletData from "../../../public/toilets.json";
 
 const SYSTEM_PROMPT = `You are CareMap, a helpful and friendly accessible navigation assistant for caregivers and seniors in Singapore.
 You help users find toilets, medical facilities, hawker centres, gyms, eldercare centres, and accessible routes.
@@ -118,64 +119,68 @@ function formatDist(m: number): string {
   return m >= 1000 ? `${(m / 1000).toFixed(1)}km` : `${Math.round(m)}m`;
 }
 
-// ── Tool: find toilets ────────────────────────────────────────────────────────
-async function findToilets(
+// ── Tool: find toilets (direct JSON — no self-fetch) ─────────────────────────
+interface ToiletEntry {
+  id:          string;
+  lat:         number;
+  lng:         number;
+  name:        string;
+  wheelchair:  boolean;
+  bidet:       boolean;
+  free?:       boolean;
+}
+
+function findToiletsLocal(
   lat: number,
   lng: number,
-  baseUrl: string
-): Promise<string> {
+  radiusMetres: number = 600
+): string {
   try {
-    const res  = await fetch(
-      `${baseUrl}/api/pois?lat=${lat}&lng=${lng}&radius=600&types=toilet`,
-      { signal: AbortSignal.timeout(8000) }
-    );
-    const data = await res.json() as any;
-    const list = (data.toilets ?? []) as Array<{
-      name: string; lat: number; lng: number;
-      hasHandicap: boolean; isFree: boolean;
-    }>;
+    const all       = toiletData as ToiletEntry[];
+    const radiusDeg = radiusMetres / 111320;
 
-    if (list.length === 0) return "No public toilets found within 600m.";
-
-    const top = list
-      .map(t => ({
-        ...t,
-        dist: distanceMetres(lat, lng, t.lat, t.lng),
-      }))
+    const nearby = all
+      .filter(t => Math.sqrt((t.lat - lat) ** 2 + (t.lng - lng) ** 2) <= radiusDeg)
+      .map(t => ({ ...t, dist: distanceMetres(lat, lng, t.lat, t.lng) }))
       .sort((a, b) => a.dist - b.dist)
       .slice(0, 3);
 
-    const lines = top.map(t => {
+    if (nearby.length === 0) {
+      return `No public toilets found within ${radiusMetres}m of your location.`;
+    }
+
+    const lines = nearby.map(t => {
       const tags = [
-        t.hasHandicap ? "♿ accessible" : "",
-        t.isFree      ? "free"          : "",
+        t.wheelchair ? "♿ wheelchair accessible" : "",
+        t.free       ? "free entry"               : "",
       ].filter(Boolean).join(", ");
-      return `• ${t.name} — ${formatDist(t.dist)} away${tags ? ` (${tags})` : ""}`;
+      return `• ${t.name} — ${formatDist(t.dist)}${tags ? ` (${tags})` : ""}`;
     });
 
-    return `Found ${list.length} toilet${list.length !== 1 ? "s" : ""} nearby. Closest:\n${lines.join("\n")}`;
+    return `Found ${nearby.length} toilet${nearby.length !== 1 ? "s" : ""} nearby:\n${lines.join("\n")}\n\nTap the 🚽 button on the map to see all toilets.`;
   } catch (err) {
-    console.error("[Agent] findToilets error:", err);
-    return "I couldn't fetch toilet data right now. Please try the 🚽 map layer instead.";
+    console.error("[Agent] findToiletsLocal error:", err);
+    return "I had trouble finding toilets. Please tap the 🚽 button on the map to see nearby ones.";
   }
 }
 
-// ── Tool: find facilities ─────────────────────────────────────────────────────
+// ── Tool: find facilities (direct external API — no self-fetch) ───────────────
 async function findFacilities(
   facilityType: string,
   lat: number,
   lng: number,
-  baseUrl: string
+  _baseUrl: string
 ): Promise<string> {
   const typeMap: Record<string, string> = {
-    medical:  "chas",
-    hawker:   "hawker",
-    eldercare:"eldercare",
-    gyms:     "gyms",
-    pharmacy: "pharmacy",
+    medical:   "chas",
+    hawker:    "hawker",
+    eldercare: "eldercare",
+    gyms:      "gyms",
+    pharmacy:  "pharmacy",
   };
 
   const apiType = typeMap[facilityType] ?? facilityType;
+
   const typeLabel: Record<string, string> = {
     chas:      "GP clinic",
     hawker:    "hawker centre",
@@ -185,26 +190,65 @@ async function findFacilities(
   };
 
   try {
-    let list: Array<{ name: string; address: string; lat: number; lng: number }> = [];
+    let list: Array<{ name: string; address?: string; lat: number; lng: number }> = [];
 
     if (apiType === "hawker") {
-      const res  = await fetch(
-        `${baseUrl}/api/pois?lat=${lat}&lng=${lng}&types=hawker`,
+      const hawkerDatasetId = "d_4a086da0a5553be1d89383cd90d07ecd";
+      const pollRes = await fetch(
+        `https://api-open.data.gov.sg/v1/public/api/datasets/${hawkerDatasetId}/poll-download`,
         { signal: AbortSignal.timeout(8000) }
       );
-      const data = await res.json() as any;
-      list = data.hawkerCentres ?? [];
+      const poll = await pollRes.json() as any;
+      if (poll.code === 0) {
+        const geoRes  = await fetch(poll.data.url, { signal: AbortSignal.timeout(10000) });
+        const geoJson = await geoRes.json() as any;
+        list = (geoJson.features ?? [])
+          .filter((f: any) => f.geometry?.coordinates)
+          .map((f: any) => ({
+            name:    f.properties?.NAME ?? f.properties?.name ?? "Hawker Centre",
+            address: f.properties?.ADDRESS ?? "",
+            lat:     f.geometry.coordinates[1],
+            lng:     f.geometry.coordinates[0],
+          }));
+      }
     } else {
-      const res  = await fetch(
-        `${baseUrl}/api/facilities?types=${apiType}`,
-        { signal: AbortSignal.timeout(10000) }
-      );
-      const data = await res.json() as any;
-      list = data[apiType] ?? [];
+      const datasetIds: Record<string, string> = {
+        chas:      "d_548c33ea2d99e29ec63a7cc9edcccedc",
+        eldercare: "d_f0fd1b3643ed8bd34bd403dedd7c1533",
+        gyms:      "d_b3ae090692ecf632116c9885cfbd3424",
+        pharmacy:  "d_bb92615f43de22933e4479558b1f6c36",
+      };
+
+      const datasetId = datasetIds[apiType];
+      if (datasetId) {
+        const pollRes = await fetch(
+          `https://api-open.data.gov.sg/v1/public/api/datasets/${datasetId}/poll-download`,
+          { signal: AbortSignal.timeout(8000) }
+        );
+        const poll = await pollRes.json() as any;
+        if (poll.code === 0) {
+          const geoRes  = await fetch(poll.data.url, { signal: AbortSignal.timeout(12000) });
+          const geoJson = await geoRes.json() as any;
+
+          list = (geoJson.features ?? [])
+            .filter((f: any) => f.geometry?.coordinates)
+            .map((f: any) => {
+              const desc         = f.properties?.Description ?? "";
+              const nameMatch    = desc.match(/<th>(?:NAME|HCI_NAME|PHARMACY_NAME)<\/th>\s*<td>([^<]+)<\/td>/i);
+              const addressMatch = desc.match(/<th>(?:ADDRESSSTREETNAME|STREET_NAME|ROAD_NAME)<\/th>\s*<td>([^<]+)<\/td>/i);
+              return {
+                name:    nameMatch?.[1]?.trim()    ?? f.properties?.Name ?? "Facility",
+                address: addressMatch?.[1]?.trim() ?? "",
+                lat:     f.geometry.coordinates[1],
+                lng:     f.geometry.coordinates[0],
+              };
+            });
+        }
+      }
     }
 
     if (list.length === 0) {
-      return `No ${typeLabel[apiType] ?? facilityType}s found nearby.`;
+      return `No ${typeLabel[apiType] ?? facilityType}s found. Please check the Facilities page for more options.`;
     }
 
     const top = list
@@ -213,15 +257,15 @@ async function findFacilities(
       .sort((a, b) => a.dist - b.dist)
       .slice(0, 3);
 
-    const label  = typeLabel[apiType] ?? facilityType;
-    const lines  = top.map(f =>
-      `• ${f.name}${f.address ? ` (${f.address})` : ""} — ${formatDist(f.dist)} away`
+    const label = typeLabel[apiType] ?? facilityType;
+    const lines = top.map(f =>
+      `• ${f.name}${f.address ? ` (${f.address})` : ""} — ${formatDist(f.dist)}`
     );
 
-    return `Found ${list.length} ${label}${list.length !== 1 ? "s" : ""} nearby. Closest:\n${lines.join("\n")}`;
+    return `Found ${list.length} ${label}${list.length !== 1 ? "s" : ""} in Singapore. Nearest to you:\n${lines.join("\n")}\n\nUse the Facilities page to browse all options.`;
   } catch (err) {
     console.error("[Agent] findFacilities error:", err);
-    return `I couldn't fetch ${facilityType} data right now. Please check the Facilities page instead.`;
+    return `I couldn't fetch ${typeLabel[apiType] ?? facilityType} data right now. Please check the Facilities page instead.`;
   }
 }
 
@@ -287,7 +331,7 @@ export async function POST(req: NextRequest) {
     let toolResult = "";
 
     if (intent.intent === "FIND_TOILET") {
-      toolResult = await findToilets(userLat, userLng, baseUrl);
+      toolResult = findToiletsLocal(userLat, userLng, 600);
     } else if (intent.intent === "FIND_FACILITY" && intent.facility_type) {
       toolResult = await findFacilities(intent.facility_type, userLat, userLng, baseUrl);
     } else if (intent.intent === "GET_ROUTE") {
