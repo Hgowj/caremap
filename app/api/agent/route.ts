@@ -60,7 +60,7 @@ Respond ONLY with JSON: {"intent": "...", "facility_type": "...", "destination":
     let intent = { intent: "GENERAL_CHAT", facility_type: "", destination: "" };
     try {
       const intentText = intentResponse.response ?? "";
-      const jsonMatch = intentText.match(/\{.*\}/s);
+      const jsonMatch = intentText.match(/\{[\s\S]*?\}/);
       if (jsonMatch) intent = JSON.parse(jsonMatch[0]);
     } catch {}
 
