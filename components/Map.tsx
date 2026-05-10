@@ -14,7 +14,7 @@ interface MapProps {
   reports?: CommunityReport[];
   toilets?: ToiletLocation[];
   hawkers?: any[];
-  events?: any[];
+  facilities?: any[];
   onMapClick?: (lat: number, lng: number) => void;
   routePoints?: [number, number][];
   clickMode?: ClickMode;
@@ -26,7 +26,7 @@ export default function CareMap({
   reports = [],
   toilets = [],
   hawkers = [],
-  events  = [],
+  facilities = [],
   onMapClick,
   routePoints = [],
   clickMode   = null,
@@ -84,7 +84,7 @@ export default function CareMap({
       prevCenter.current = center;
       prevZoom.current   = zoom;
 
-      renderAll(L, map, reports, toilets, hawkers, events, routePoints);
+      renderAll(L, map, reports, toilets, hawkers, facilities, routePoints);
     });
 
     return () => {
@@ -115,9 +115,9 @@ export default function CareMap({
       mapRef.current.eachLayer((layer) => {
         if (!("_url" in layer)) mapRef.current!.removeLayer(layer);
       });
-      renderAll(L, mapRef.current, reports, toilets, hawkers, events, routePoints);
+      renderAll(L, mapRef.current, reports, toilets, hawkers, facilities, routePoints);
     });
-  }, [reports, toilets, hawkers, events, routePoints]);
+  }, [reports, toilets, hawkers, facilities, routePoints]);
 
   const cursor = clickMode ? "crosshair" : "grab";
 
@@ -134,13 +134,13 @@ function renderAll(
   reports: CommunityReport[],
   toilets: ToiletLocation[],
   hawkers: any[],
-  events: any[],
+  facilities: any[],
   routePoints: [number, number][]
 ) {
   renderReports(L, map, reports);
   renderToilets(L, map, toilets);
   renderHawkers(L, map, hawkers);
-  renderEvents(L, map, events);
+  renderFacilities(L, map, facilities);
   if (routePoints.length >= 2) renderRoute(L, map, routePoints);
 }
 
@@ -204,21 +204,30 @@ function renderHawkers(L: typeof import("leaflet"), map: LeafletMap, hawkers: an
   });
 }
 
-function renderEvents(L: typeof import("leaflet"), map: LeafletMap, events: any[]) {
-  events.forEach((evt) => {
-    if (!evt.lat || !evt.lng) return;
-    const icon = L.divIcon({
-      html: `<div style="background:white;border:2px solid #8b5cf6;border-radius:8px;padding:2px 5px;font-size:13px;box-shadow:0 2px 6px rgba(0,0,0,0.15);">📅</div>`,
-      className: "", iconSize: [34, 26], iconAnchor: [17, 13],
-    });
-    L.marker([evt.lat, evt.lng], { icon })
+function createFacilityIcon(L: typeof import("leaflet"), type: string) {
+  const emoji = type === "chas" || type === "gp" ? "🏥"
+    : type === "pharmacy" ? "💊"
+    : type === "eldercare" ? "👴"
+    : type === "gyms" ? "🏋️"
+    : "📍";
+  return L.divIcon({
+    className: "",
+    html: `<div style="background:white;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-size:16px;box-shadow:0 2px 8px rgba(0,0,0,0.15);border:2px solid #e5e7eb;">${emoji}</div>`,
+    iconSize: [32, 32],
+    iconAnchor: [16, 16],
+  });
+}
+
+function renderFacilities(L: typeof import("leaflet"), map: LeafletMap, facilities: any[]) {
+  facilities.forEach((f, i) => {
+    if (!f.lat || !f.lng) return;
+    const icon = createFacilityIcon(L, f.type ?? "");
+    L.marker([f.lat, f.lng], { icon })
       .addTo(map)
       .bindPopup(`
-        <div style="font-size:13px;padding:4px;min-width:180px">
-          <strong>${evt.title}</strong><br/>
-          <span style="color:#8b5cf6;font-size:11px">📅 ${evt.date} · ${evt.time}</span><br/>
-          <span style="color:#6b7280;font-size:11px">📍 ${evt.location}</span><br/>
-          ${evt.accessible ? '<span style="color:#0d9488;font-size:11px">♿ Accessible</span>' : ""}
+        <div style="font-size:13px;padding:4px;min-width:140px">
+          <strong>${f.name ?? "Facility"}</strong>
+          ${f.address ? `<br/><span style="color:#6b7280;font-size:11px">${f.address}</span>` : ""}
         </div>
       `);
   });

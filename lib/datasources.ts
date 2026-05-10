@@ -1,6 +1,4 @@
-import fs from "fs";
-import path from "path";
-import toiletData from "../public/toilets.geojson";
+import toiletList from "../public/toilets.json";
 
 export interface ToiletLocation {
   id: string;
@@ -34,25 +32,25 @@ export async function getToiletsNearby(
   radiusMetres: number = 800
 ): Promise<ToiletLocation[]> {
   try {
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? "https://caremap.goh-jing-wen.workers.dev";
-    const res = await fetch(`${baseUrl}/toilets.json`);
-    if (!res.ok) throw new Error(`${res.status}`);
-    const all: any[] = await res.json() as any;
+    const all = toiletList as Array<{
+      id: string; lat: number; lng: number;
+      name: string; wheelchair: boolean; bidet: boolean; free?: boolean;
+    }>;
     const radiusDeg = radiusMetres / 111320;
     return all
-      .filter((t) => Math.sqrt((t.lat - lat) ** 2 + (t.lng - lng) ** 2) <= radiusDeg)
-      .map((t) => ({
+      .filter(t => Math.sqrt((t.lat - lat) ** 2 + (t.lng - lng) ** 2) <= radiusDeg)
+      .map(t => ({
         id: t.id,
         name: t.name ?? "Public Toilet",
         lat: t.lat,
         lng: t.lng,
-        hasBidet: t.bidet,
-        hasHandicap: t.wheelchair,
-        isFree: t.free,
+        hasBidet: t.bidet ?? false,
+        hasHandicap: t.wheelchair ?? false,
+        isFree: t.free ?? false,
         source: "osm" as const,
       }));
   } catch (err) {
-    console.error("[Toilets] Failed to fetch:", err);
+    console.error("[Toilets] Failed:", err);
     return [];
   }
 }

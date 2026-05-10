@@ -20,7 +20,7 @@ interface Comment {
 // In-memory comments (cleared on refresh — Phase 2: persist to D1)
 const commentStore: Comment[] = [];
 
-export default function ReportsPage() {
+export default function NotesPage() {
   const [reports, setReports]           = useState<CommunityReport[]>([]);
   const [loading, setLoading]           = useState(true);
   const [showModal, setShowModal]       = useState(false);
@@ -92,9 +92,9 @@ export default function ReportsPage() {
           </div>
           <button
             onClick={() => setShowModal(true)}
-            className="flex items-center gap-1.5 bg-teal-600 hover:bg-teal-700 text-white text-xs font-semibold px-3 py-2 rounded-xl transition-all"
+            className="flex items-center gap-1.5 bg-brand-500 hover:bg-brand-600 text-white text-xs font-semibold px-3 py-2 rounded-xl transition-all"
           >
-            <Plus size={14} /> Report
+            <Plus size={14} /> Add Note
           </button>
         </div>
       </div>
@@ -110,7 +110,7 @@ export default function ReportsPage() {
             <p className="text-4xl mb-3">✅</p>
             <p className="text-gray-600 font-medium">No active notes</p>
             <p className="text-gray-400 text-sm mt-1">
-              Tap <strong>Notes</strong> above or the flag icon on the map.
+              Tap <strong>Add Note</strong> above or the flag icon on the map.
             </p>
           </div>
         ) : (
@@ -132,8 +132,8 @@ export default function ReportsPage() {
                           <p className="font-semibold text-sm text-gray-800">{config.label}</p>
                           {(r as any).locationName && (
                             <div className="flex items-center gap-1 mt-0.5">
-                              <MapPin size={10} className="text-teal-500 shrink-0" />
-                              <p className="text-xs text-teal-600 truncate">{(r as any).locationName}</p>
+                              <MapPin size={10} className="text-brand-500 shrink-0" />
+                              <p className="text-xs text-brand-600 truncate">{(r as any).locationName}</p>
                             </div>
                           )}
                           {r.description && (
@@ -146,7 +146,7 @@ export default function ReportsPage() {
                             </div>
                             <button
                               onClick={() => setExpandedId(isExpanded ? null : r.id)}
-                              className="flex items-center gap-1 text-xs text-gray-400 hover:text-teal-600 transition-colors"
+                              className="flex items-center gap-1 text-xs text-gray-400 hover:text-brand-600 transition-colors"
                             >
                               <MessageCircle size={11} />
                               <span>{rComments.length > 0 ? `${rComments.length} comment${rComments.length !== 1 ? "s" : ""}` : "Comment"}</span>
@@ -159,7 +159,7 @@ export default function ReportsPage() {
                       {/* Confirm/upvote */}
                       <button
                         onClick={() => confirm(r.id)}
-                        className="flex flex-col items-center gap-0.5 text-teal-600 hover:text-teal-700 transition-colors shrink-0 pt-0.5"
+                        className="flex flex-col items-center gap-0.5 text-brand-600 hover:text-brand-700 transition-colors shrink-0 pt-0.5"
                       >
                         <ThumbsUp size={16} />
                         <span className="text-xs font-semibold">{r.confirmedCount}</span>
@@ -188,12 +188,12 @@ export default function ReportsPage() {
                           onChange={e => setCommentText(e.target.value)}
                           onKeyDown={e => e.key === "Enter" && addComment(r.id)}
                           placeholder='e.g. "Elevator still not working as of 3pm"'
-                          className="flex-1 text-xs bg-white border border-gray-200 rounded-xl px-3 py-2 outline-none focus:border-teal-400"
+                          className="flex-1 text-xs bg-white border border-gray-200 rounded-xl px-3 py-2 outline-none focus:border-brand-400"
                         />
                         <button
                           onClick={() => addComment(r.id)}
                           disabled={!commentText.trim()}
-                          className="shrink-0 bg-teal-600 disabled:opacity-40 text-white text-xs font-medium px-3 py-2 rounded-xl"
+                          className="shrink-0 bg-brand-500 disabled:opacity-40 text-white text-xs font-medium px-3 py-2 rounded-xl"
                         >
                           Post
                         </button>

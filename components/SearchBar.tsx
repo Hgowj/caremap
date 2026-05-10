@@ -78,7 +78,7 @@ export default function SearchBar({ placeholder, onSelect, icon = "destination",
 
   return (
     <div className="relative">
-      <div className="flex items-center gap-2 bg-gray-50 border-2 border-transparent rounded-2xl px-3 py-2.5 focus-within:border-teal-400 focus-within:bg-white transition-all">
+      <div className="flex items-center gap-2 bg-gray-50 border-2 border-transparent rounded-2xl px-3 py-2.5 focus-within:border-brand-400 focus-within:bg-white transition-all">
         <MapPin size={17} style={{ color: iconColor, flexShrink: 0 }} />
         <input
           type="text"
@@ -87,7 +87,7 @@ export default function SearchBar({ placeholder, onSelect, icon = "destination",
           placeholder={placeholder}
           className="flex-1 bg-transparent text-sm text-gray-700 placeholder:text-gray-400 outline-none"
         />
-        {loading && <Loader2 size={15} className="animate-spin text-teal-500 shrink-0" />}
+        {loading && <Loader2 size={15} className="animate-spin text-brand-500 shrink-0" />}
         {query && !loading && (
           <button onClick={handleClear} className="text-gray-400 hover:text-gray-600 shrink-0">
             <X size={15} />
@@ -104,7 +104,7 @@ export default function SearchBar({ placeholder, onSelect, icon = "destination",
                 key={i}
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => handleSelect(r)}
-                className="w-full text-left px-4 py-3 hover:bg-teal-50 transition-colors border-b border-gray-50 last:border-0"
+                className="w-full text-left px-4 py-3 hover:bg-brand-50 transition-colors border-b border-gray-50 last:border-0"
               >
                 <div className="text-sm font-medium text-gray-800 truncate">{label}</div>
                 <div className="text-xs text-gray-400 truncate mt-0.5">{r.ADDRESS}</div>

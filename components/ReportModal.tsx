@@ -32,9 +32,11 @@ export default function ReportModal({ lat, lng, onClose, onSubmit }: ReportModal
   const [step, setStep]               = useState<Step>("location");
   const [resolvedLocation, setResolved] = useState<string>("");
   const [locating, setLocating]       = useState(false);
-  const [usedGps, setUsedGps]         = useState(false);
-  const [reportLat, setReportLat]     = useState(lat);
-  const [reportLng, setReportLng]     = useState(lng);
+  const [modalLat, setModalLat]       = useState(lat);
+  const [modalLng, setModalLng]       = useState(lng);
+  const [locationMode, setLocationMode] = useState<"gps" | "search">("gps");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<any[]>([]);
   const [category, setCategory]       = useState<ReportCategory | null>(null);
   const [description, setDescription] = useState("");
   const [submitting, setSubmitting]   = useState(false);
@@ -69,11 +71,31 @@ export default function ReportModal({ lat, lng, onClose, onSubmit }: ReportModal
     setLocating(true);
     navigator.geolocation.getCurrentPosition(async (pos) => {
       const { latitude, longitude } = pos.coords;
-      setReportLat(latitude);
-      setReportLng(longitude);
-      setUsedGps(true);
+      setModalLat(latitude);
+      setModalLng(longitude);
       await reverseGeocode(latitude, longitude);
     }, () => setLocating(false));
+  };
+
+  const handleSearch = async (q: string) => {
+    setSearchQuery(q);
+    if (q.length < 3) { setSearchResults([]); return; }
+    try {
+      const res  = await fetch(`/api/search?q=${encodeURIComponent(q)}`);
+      const data = await res.json() as any;
+      setSearchResults(data.results?.slice(0, 5) ?? []);
+    } catch {
+      setSearchResults([]);
+    }
+  };
+
+  const handlePickSearchResult = (r: any) => {
+    const label = r.BUILDING && r.BUILDING !== "NIL" ? r.BUILDING : r.ADDRESS;
+    setModalLat(parseFloat(r.LATITUDE));
+    setModalLng(parseFloat(r.LONGITUDE));
+    setResolved(label);
+    setSearchQuery(label);
+    setSearchResults([]);
   };
 
   const handleSubmit = async () => {
@@ -84,7 +106,7 @@ export default function ReportModal({ lat, lng, onClose, onSubmit }: ReportModal
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          lat: reportLat, lng: reportLng,
+          lat: modalLat, lng: modalLng,
           category, description,
         }),
       });
@@ -104,14 +126,14 @@ export default function ReportModal({ lat, lng, onClose, onSubmit }: ReportModal
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h2 className="font-display font-semibold text-gray-800 text-lg">Report an Issue</h2>
+            <h2 className="font-display font-semibold text-gray-800 text-lg">Add a note</h2>
             {/* Step indicator */}
             <div className="flex items-center gap-1 mt-1">
               {(["location","category","details"] as Step[]).map((s, i) => (
                 <div key={s} className="flex items-center gap-1">
                   <div className={`w-2 h-2 rounded-full transition-all ${
-                    step === s ? "bg-teal-500 w-4" :
-                    ["location","category","details"].indexOf(step) > i ? "bg-teal-300" : "bg-gray-200"
+                    step === s ? "bg-brand-500 w-4" :
+                    ["location","category","details"].indexOf(step) > i ? "bg-brand-300" : "bg-gray-200"
                   }`} />
                 </div>
               ))}
@@ -127,42 +149,104 @@ export default function ReportModal({ lat, lng, onClose, onSubmit }: ReportModal
           <div className="space-y-3">
             <p className="text-sm text-gray-500 font-medium">Where is the issue?</p>
 
-            {/* Current resolved location */}
-            <div className="flex items-start gap-3 bg-gray-50 rounded-2xl p-3.5">
-              <MapPin size={18} className="text-teal-500 shrink-0 mt-0.5" />
-              <div className="flex-1 min-w-0">
-                {locating ? (
-                  <div className="flex items-center gap-2">
-                    <Loader2 size={14} className="animate-spin text-teal-500" />
-                    <span className="text-sm text-gray-400">Getting location…</span>
-                  </div>
-                ) : (
-                  <>
-                    <p className="text-sm font-medium text-gray-800 truncate">{resolvedLocation || "Tap map to set location"}</p>
-                    <p className="text-xs text-gray-400 mt-0.5">{reportLat.toFixed(5)}, {reportLng.toFixed(5)}</p>
-                  </>
-                )}
-              </div>
+            {/* Location mode toggle */}
+            <div className="flex gap-2">
+              <button
+                onClick={() => { setLocationMode("gps"); reverseGeocode(lat, lng); setModalLat(lat); setModalLng(lng); }}
+                className={`flex-1 py-2 rounded-xl text-xs font-semibold border-2 transition-all ${
+                  locationMode === "gps"
+                    ? "border-brand-500 bg-brand-500 text-white"
+                    : "border-gray-200 text-gray-600"
+                }`}
+              >
+                📍 Use my location
+              </button>
+              <button
+                onClick={() => setLocationMode("search")}
+                className={`flex-1 py-2 rounded-xl text-xs font-semibold border-2 transition-all ${
+                  locationMode === "search"
+                    ? "border-brand-500 bg-brand-500 text-white"
+                    : "border-gray-200 text-gray-600"
+                }`}
+              >
+                🔍 Search location
+              </button>
             </div>
 
-            {/* GPS button */}
-            <button
-              onClick={handleUseGPS}
-              disabled={locating}
-              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 border-dashed border-teal-200 text-teal-600 text-sm font-medium hover:bg-teal-50 transition-all disabled:opacity-50"
-            >
-              {locating ? <Loader2 size={15} className="animate-spin" /> : <MapPin size={15} />}
-              Use my current GPS location
-            </button>
+            {locationMode === "gps" ? (
+              <>
+                {/* Current resolved location */}
+                <div className="flex items-start gap-3 bg-gray-50 rounded-2xl p-3.5">
+                  <MapPin size={18} className="text-brand-500 shrink-0 mt-0.5" />
+                  <div className="flex-1 min-w-0">
+                    {locating ? (
+                      <div className="flex items-center gap-2">
+                        <Loader2 size={14} className="animate-spin text-brand-500" />
+                        <span className="text-sm text-gray-400">Getting location…</span>
+                      </div>
+                    ) : (
+                      <>
+                        <p className="text-sm font-medium text-gray-800 truncate">{resolvedLocation || "Tap map to set location"}</p>
+                        <p className="text-xs text-gray-400 mt-0.5">{modalLat.toFixed(5)}, {modalLng.toFixed(5)}</p>
+                      </>
+                    )}
+                  </div>
+                </div>
 
-            <p className="text-xs text-gray-400 text-center">
-              — or tap the flag button on the map to pin the exact spot —
-            </p>
+                {/* GPS button */}
+                <button
+                  onClick={handleUseGPS}
+                  disabled={locating}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 border-dashed border-brand-200 text-brand-600 text-sm font-medium hover:bg-brand-50 transition-all disabled:opacity-50"
+                >
+                  {locating ? <Loader2 size={15} className="animate-spin" /> : <MapPin size={15} />}
+                  Use my current GPS location
+                </button>
+
+                <p className="text-xs text-gray-400 text-center">
+                  — or tap the flag button on the map to pin the exact spot —
+                </p>
+              </>
+            ) : (
+              <div className="relative">
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={e => handleSearch(e.target.value)}
+                  placeholder="Search for a location…"
+                  className="w-full text-sm border-2 border-gray-100 rounded-xl px-3 py-2.5 text-gray-700 placeholder:text-gray-300 outline-none focus:border-brand-400"
+                />
+                {searchResults.length > 0 && (
+                  <div className="absolute z-10 top-full mt-1 w-full bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
+                    {searchResults.map((r: any, i: number) => {
+                      const label = r.BUILDING && r.BUILDING !== "NIL" ? r.BUILDING : r.ADDRESS;
+                      return (
+                        <button
+                          key={i}
+                          onMouseDown={e => e.preventDefault()}
+                          onClick={() => handlePickSearchResult(r)}
+                          className="w-full text-left px-4 py-3 hover:bg-brand-50 transition-colors border-b border-gray-50 last:border-0"
+                        >
+                          <div className="text-sm font-medium text-gray-800 truncate">{label}</div>
+                          <div className="text-xs text-gray-400 truncate mt-0.5">{r.ADDRESS}</div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+                {resolvedLocation && (
+                  <div className="flex items-center gap-2 mt-2 bg-brand-50 rounded-xl px-3 py-2">
+                    <MapPin size={13} className="text-brand-500 shrink-0" />
+                    <p className="text-xs text-brand-700 truncate font-medium">{resolvedLocation}</p>
+                  </div>
+                )}
+              </div>
+            )}
 
             <button
               onClick={() => setStep("category")}
               disabled={!canProceedFromLocation}
-              className="w-full py-3 rounded-2xl text-white font-semibold text-sm bg-teal-600 hover:bg-teal-700 disabled:opacity-40 flex items-center justify-center gap-2 transition-all"
+              className="w-full py-3 rounded-2xl text-white font-semibold text-sm bg-brand-600 hover:bg-brand-700 disabled:opacity-40 flex items-center justify-center gap-2 transition-all"
             >
               Continue <ChevronRight size={16} />
             </button>
@@ -172,9 +256,9 @@ export default function ReportModal({ lat, lng, onClose, onSubmit }: ReportModal
         {/* ── STEP 2: Category ── */}
         {step === "category" && (
           <div className="space-y-3">
-            <div className="flex items-center gap-2 bg-teal-50 rounded-xl px-3 py-2">
-              <MapPin size={13} className="text-teal-500 shrink-0" />
-              <p className="text-xs text-teal-700 truncate font-medium">{resolvedLocation}</p>
+            <div className="flex items-center gap-2 bg-brand-50 rounded-xl px-3 py-2">
+              <MapPin size={13} className="text-brand-500 shrink-0" />
+              <p className="text-xs text-brand-700 truncate font-medium">{resolvedLocation}</p>
             </div>
 
             <p className="text-sm text-gray-500 font-medium">What did you encounter?</p>
@@ -186,8 +270,8 @@ export default function ReportModal({ lat, lng, onClose, onSubmit }: ReportModal
                   onClick={() => setCategory(c.value)}
                   className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border-2 text-sm font-medium transition-all ${
                     category === c.value
-                      ? "border-teal-500 bg-teal-50 text-teal-700"
-                      : "border-gray-100 bg-gray-50 text-gray-600 hover:border-teal-200"
+                      ? "border-brand-500 bg-brand-50 text-brand-700"
+                      : "border-gray-100 bg-gray-50 text-gray-600 hover:border-brand-200"
                   }`}
                 >
                   <span>{c.emoji}</span>
@@ -199,7 +283,7 @@ export default function ReportModal({ lat, lng, onClose, onSubmit }: ReportModal
             <button
               onClick={() => setStep("details")}
               disabled={!category}
-              className="w-full py-3 rounded-2xl text-white font-semibold text-sm bg-teal-600 hover:bg-teal-700 disabled:opacity-40 flex items-center justify-center gap-2 transition-all"
+              className="w-full py-3 rounded-2xl text-white font-semibold text-sm bg-brand-600 hover:bg-brand-700 disabled:opacity-40 flex items-center justify-center gap-2 transition-all"
             >
               Continue <ChevronRight size={16} />
             </button>
@@ -209,9 +293,9 @@ export default function ReportModal({ lat, lng, onClose, onSubmit }: ReportModal
         {/* ── STEP 3: Details ── */}
         {step === "details" && (
           <div className="space-y-3">
-            <div className="flex items-center gap-2 bg-teal-50 rounded-xl px-3 py-2">
-              <MapPin size={13} className="text-teal-500 shrink-0" />
-              <p className="text-xs text-teal-700 truncate font-medium">{resolvedLocation}</p>
+            <div className="flex items-center gap-2 bg-brand-50 rounded-xl px-3 py-2">
+              <MapPin size={13} className="text-brand-500 shrink-0" />
+              <p className="text-xs text-brand-700 truncate font-medium">{resolvedLocation}</p>
             </div>
 
             {category && (() => {
@@ -236,15 +320,15 @@ export default function ReportModal({ lat, lng, onClose, onSubmit }: ReportModal
                 'Describe what you saw…'
               }
               rows={3}
-              className="w-full text-sm border-2 border-gray-100 rounded-xl px-3 py-2.5 text-gray-700 placeholder:text-gray-300 outline-none focus:border-teal-400 resize-none"
+              className="w-full text-sm border-2 border-gray-100 rounded-xl px-3 py-2.5 text-gray-700 placeholder:text-gray-300 outline-none focus:border-brand-400 resize-none"
             />
 
             <button
               onClick={handleSubmit}
               disabled={submitting}
-              className="w-full py-3 rounded-2xl text-white font-semibold text-sm bg-teal-600 hover:bg-teal-700 disabled:opacity-50 flex items-center justify-center gap-2 transition-all"
+              className="w-full py-3 rounded-2xl text-white font-semibold text-sm bg-brand-600 hover:bg-brand-700 disabled:opacity-50 flex items-center justify-center gap-2 transition-all"
             >
-              {submitting ? <><Loader2 size={15} className="animate-spin" /> Submitting…</> : "Submit Report"}
+              {submitting ? <><Loader2 size={15} className="animate-spin" /> Submitting…</> : "Save note"}
             </button>
           </div>
         )}
@@ -253,7 +337,7 @@ export default function ReportModal({ lat, lng, onClose, onSubmit }: ReportModal
         {step === "done" && (
           <div className="text-center py-8">
             <div className="text-5xl mb-3">✅</div>
-            <p className="text-teal-600 font-semibold text-lg">Report submitted!</p>
+            <p className="text-brand-600 font-semibold text-lg">Note saved!</p>
             <p className="text-gray-400 text-sm mt-1">It will appear on the map for others to see.</p>
           </div>
         )}
