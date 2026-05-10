@@ -26,15 +26,29 @@ export default function AgentChat({ userLat = 1.3521, userLng = 103.8198 }: Prop
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Greeting when opened
-  useEffect(() => {
-    if (open && messages.length === 0) {
-      setMessages([{
-        role: "assistant",
-        content: "Hi! I'm CareMap. Ask me to find toilets, medical facilities, or accessible routes — in any language! 😊\n\nHi! ฉันคือ CareMap ถามฉันเกี่ยวกับห้องน้ำ สิ่งอำนวยความสะดวก หรือเส้นทางได้เลย! 🗺️",
-      }]);
-    }
-  }, [open]);
+  // Get current locale from cookie
+const [currentLocale, setCurrentLocale] = useState("en");
+
+useEffect(() => {
+  const match = document.cookie.match(/cm_locale=([^;]+)/);
+  if (match) setCurrentLocale(match[1]);
+}, []);
+
+// Greeting when opened (language-aware)
+useEffect(() => {
+  if (open && messages.length === 0) {
+    const greetings: Record<string, string> = {
+      en: "Hi! I'm CareMap. Ask me to find toilets, medical facilities, or accessible routes! 😊",
+      zh: "你好！我是CareMap。您可以询问我如何找到洗手间、医疗设施或无障碍路线！😊",
+      th: "สวัสดี! ฉันคือ CareMap ถามฉันเกี่ยวกับห้องน้ำ สิ่งอำนวยความสะดวก หรือเส้นทางที่เข้าถึงได้เลย! 😊",
+      tl: "Kamusta! Ako si CareMap. Tanungin mo ako tungkol sa mga CR, pasilidad, o accessible na ruta! 😊",
+      ta: "வணக்கம்! நான் CareMap. கழிவறைகள், மருத்துவ வசதிகள் அல்லது அணுகக்கூடிய பாதைகளை கண்டறிய கேளுங்கள்! 😊",
+    };
+
+    const greeting = greetings[currentLocale] ?? greetings.en;
+    setMessages([{ role: "assistant", content: greeting }]);
+  }
+}, [open, currentLocale, messages.length]);
 
   const sendMessage = async (text: string) => {
     if (!text.trim() || loading) return;
@@ -117,7 +131,14 @@ export default function AgentChat({ userLat = 1.3521, userLng = 103.8198 }: Prop
           </div>
           <div>
             <p className="font-semibold text-sm text-gray-800">CareMap Assistant</p>
-            <p className="text-[10px] text-brand-500">EN · 中文 · ภาษาไทย · Filipino · தமிழ்</p>
+            <p className="text-[10px] text-brand-500">
+                {currentLocale === "en" ? "English" :
+                currentLocale === "zh" ? "中文" :
+                currentLocale === "th" ? "ภาษาไทย" :
+                currentLocale === "tl" ? "Filipino" :
+                currentLocale === "ta" ? "தமிழ்" : "English"}
+                {" · Ask me anything"}
+            </p>
           </div>
         </div>
         <button onClick={() => setOpen(false)} className="w-8 h-8 rounded-xl bg-gray-100 flex items-center justify-center">
@@ -155,7 +176,13 @@ export default function AgentChat({ userLat = 1.3521, userLng = 103.8198 }: Prop
           value={input}
           onChange={e => setInput(e.target.value)}
           onKeyDown={e => e.key === "Enter" && sendMessage(input)}
-          placeholder="Ask in any language..."
+          placeholder={
+            currentLocale === "zh" ? "用任何语言提问..." :
+            currentLocale === "th" ? "ถามในภาษาใดก็ได้..." :
+            currentLocale === "tl" ? "Magtanong sa anumang wika..." :
+            currentLocale === "ta" ? "எந்த மொழியிலும் கேளுங்கள்..." :
+            "Ask me anything..."
+        }   
           className="flex-1 bg-gray-50 border border-gray-200 rounded-2xl px-4 py-2.5 text-sm outline-none focus:border-brand-400 transition-all"
         />
         <button

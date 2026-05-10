@@ -61,7 +61,7 @@ export default function SettingsPage() {
   }, []);
 
   const switchLanguage = (code: string) => {
-    document.cookie = `cm_locale=${code};path=/;max-age=${365 * 24 * 60 * 60}`;
+    document.cookie = `cm_locale=${code};path=/;max-age=${365 * 24 * 60 * 60};SameSite=Lax`;
     setCurrentLang(code);
     window.location.reload();
   };
