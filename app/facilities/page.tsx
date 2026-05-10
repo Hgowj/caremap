@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import BottomNav from "@/components/BottomNav";
+import AppShell from "@/components/AppShell";
 import { Search, Loader2, MapPin, Phone, Navigation, ChevronRight } from "lucide-react";
 
 type Category = "medical" | "community" | "eldercare" | "daily";
@@ -199,6 +200,7 @@ export default function FacilitiesPage() {
     SUB_CATEGORIES[category].find(x => x.id === s)?.icon ?? "📍";
 
   return (
+    <AppShell>
     <div className="flex flex-col" style={{ height: "100dvh", overflow: "hidden" }}>
 
       {/* Header */}
@@ -318,5 +320,6 @@ export default function FacilitiesPage() {
 
       <BottomNav />
     </div>
+    </AppShell>
   );
 }

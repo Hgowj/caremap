@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { MapPin } from "lucide-react";
 import BottomNav from "@/components/BottomNav";
+import AppShell from "@/components/AppShell";
 
 interface Prefs {
   userType: string;
@@ -76,6 +77,7 @@ export default function SettingsPage() {
   );
 
   return (
+    <AppShell>
     <div className="flex flex-col" style={{ height: "100dvh", overflow: "hidden" }}>
 
       {/* Header */}
@@ -187,5 +189,6 @@ export default function SettingsPage() {
 
       <BottomNav />
     </div>
+    </AppShell>
   );
 }

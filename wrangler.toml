@@ -16,3 +16,4 @@ directory = ".open-next/assets"
 
 [vars]
 NEXT_PUBLIC_BASE_URL = "https://caremap.goh-jing-wen.workers.dev"
+GOOGLE_MAPS_API_KEY = "AIzaSyAc-hU8ny3AlLs2_zvCC6je6ZHZCpIP3u0"

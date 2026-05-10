@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { AlertTriangle, Clock, ThumbsUp, Plus, MapPin, MessageCircle, ChevronDown, ChevronUp } from "lucide-react";
 import BottomNav from "@/components/BottomNav";
 import ReportModal from "@/components/ReportModal";
+import AppShell from "@/components/AppShell";
 import { REPORT_CONFIG } from "@/lib/reports";
 import type { CommunityReport } from "@/lib/reports";
 
@@ -83,6 +84,7 @@ export default function NotesPage() {
   };
 
   return (
+    <AppShell>
     <div className="flex flex-col" style={{ height: "100dvh", overflow: "hidden" }}>
 
       {/* Header */}
@@ -218,5 +220,6 @@ export default function NotesPage() {
         />
       )}
     </div>
+    </AppShell>
   );
 }

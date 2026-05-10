@@ -11,6 +11,8 @@ import {
 import SearchBar, { PlaceResult } from "@/components/SearchBar";
 import ReportModal from "@/components/ReportModal";
 import BottomNav from "@/components/BottomNav";
+import AgentChat from "@/components/AgentChat";
+import AppShell from "@/components/AppShell";
 import type { CommunityReport } from "@/lib/reports";
 import type { ToiletLocation } from "@/lib/datasources";
 
@@ -77,7 +79,7 @@ function MapPageInner() {
 
   // Map state
   const [mapCenter,    setMapCenter]    = useState<[number, number]>(DEFAULT_CENTER);
-  const [mapZoom,      setMapZoom]      = useState(14);
+  const [mapZoom,      setMapZoom]      = useState(12);
   const [routePoints,  setRoutePoints]  = useState<[number, number][]>([]);
   const [clickMode,    setClickMode]    = useState<ClickMode>(null);
   const [reportCoords, setReportCoords] = useState<[number, number] | null>(null);
@@ -251,51 +253,56 @@ function MapPageInner() {
 
       const terrain = data.terrain ?? { classification: "flat", maxGradientPercent: 0, totalAscent: 0 };
       const pts     = data.route_points ?? [[sLat, sLng], [eLat, eLng]];
-      const dist    = data.route_summary.total_distance;
-      const time    = data.route_summary.total_time;
+      const baseDist = data.route_summary.total_distance;
+      const baseTime = Math.round(data.route_summary.total_time *
+        (savedPrefs?.mobilityAid === "wheelchair" || savedPrefs?.mobilityAid === "frame" ? 1.25 : 1.0));
 
       const nearbyReports = reports.filter(r => {
         const d = Math.sqrt((r.lat - (sLat + eLat) / 2) ** 2 + (r.lng - (sLng + eLng) / 2) ** 2);
         return d < 0.015;
       }).length;
 
-      const baseShelter = terrain.classification === "flat" ? 80 : terrain.classification === "gentle" ? 65 : 45;
+      const baseShelter   = terrain.classification === "flat" ? 75 : terrain.classification === "gentle" ? 60 : 40;
+      const baseRestStops = Math.max(1, Math.round(baseDist / 450));
+      const baseWashrooms = Math.max(0, Math.round(baseDist / 700));
 
       const variants: RouteVariant[] = [
         {
           id: "best", label: "Best match", badge: "BEST FOR YOU", badgeGreen: true,
-          time, distance: dist, terrain, shelterPercent: baseShelter,
-          restStopCount: Math.max(1, Math.round(dist / 600)),
-          washroomCount: Math.max(1, Math.round(dist / 800)),
+          time: baseTime, distance: baseDist, terrain, shelterPercent: baseShelter,
+          restStopCount: baseRestStops,
+          washroomCount: baseWashrooms,
           reportCount: nearbyReports, routePoints: pts,
         },
         {
           id: "flattest", label: "Flattest path",
-          time: Math.round(time * 1.15), distance: Math.round(dist * 1.1),
-          terrain: { classification: "flat", maxGradientPercent: 0.5, totalAscent: 0 },
-          shelterPercent: Math.max(30, baseShelter - 15),
-          restStopCount: Math.max(2, Math.round(dist / 500)),
-          washroomCount: Math.max(0, Math.round(dist / 1000)),
+          time: Math.round(baseTime * 1.18), distance: Math.round(baseDist * 1.12),
+          terrain: { classification: "flat", maxGradientPercent: 0.8, totalAscent: 0 },
+          shelterPercent: Math.min(90, baseShelter + 5),
+          restStopCount: Math.max(2, baseRestStops + 1),
+          washroomCount: baseWashrooms,
           reportCount: 0, routePoints: pts,
         },
         {
           id: "rest_stops", label: "Most rest stops",
-          time: Math.round(time * 1.25), distance: Math.round(dist * 1.15),
-          terrain: { classification: "gentle", maxGradientPercent: 3, totalAscent: Math.round(dist * 0.01) },
-          shelterPercent: Math.min(95, baseShelter + 5),
-          restStopCount: Math.max(3, Math.round(dist / 400)),
-          washroomCount: Math.max(1, Math.round(dist / 700)),
+          time: Math.round(baseTime * 1.22), distance: Math.round(baseDist * 1.14),
+          terrain: { classification: terrain.classification === "steep" ? "gentle" : terrain.classification as any, maxGradientPercent: Math.min(terrain.maxGradientPercent, 4), totalAscent: Math.round(baseDist * 0.008) },
+          shelterPercent: Math.min(85, baseShelter + 8),
+          restStopCount: Math.max(3, Math.round(baseDist / 350)),
+          washroomCount: Math.max(1, Math.round(baseDist / 600)),
           reportCount: 0, routePoints: pts,
         },
         {
           id: "quickest", label: "Quickest route",
-          badge: savedPrefs?.slope === "flat" && terrain.maxGradientPercent > 3 ? "Less suitable" : undefined,
+          badge: (savedPrefs?.slope === "flat" && terrain.maxGradientPercent > 4) ||
+                 (savedPrefs?.mobilityAid === "wheelchair" && terrain.classification === "steep")
+                 ? "Less suitable" : undefined,
           badgeGreen: false,
-          time: Math.round(time * 0.8), distance: Math.round(dist * 0.85),
-          terrain: { classification: "gentle", maxGradientPercent: terrain.maxGradientPercent * 1.2, totalAscent: terrain.totalAscent },
-          shelterPercent: Math.max(20, baseShelter - 30),
-          restStopCount: Math.max(0, Math.round(dist / 900)),
-          washroomCount: Math.max(0, Math.round(dist / 1200)),
+          time: Math.round(baseTime * 0.78), distance: Math.round(baseDist * 0.82),
+          terrain: { classification: "gentle", maxGradientPercent: terrain.maxGradientPercent * 1.3, totalAscent: terrain.totalAscent },
+          shelterPercent: Math.max(25, baseShelter - 25),
+          restStopCount: Math.max(0, Math.round(baseDist / 1000)),
+          washroomCount: Math.max(0, Math.round(baseDist / 1100)),
           reportCount: nearbyReports, routePoints: pts,
         },
       ];
@@ -750,6 +757,7 @@ function MapPageInner() {
         </div>
       )}
 
+      <AgentChat userLat={mapCenter[0]} userLng={mapCenter[1]} />
       <BottomNav />
 
       {reportCoords && (
@@ -766,12 +774,14 @@ function MapPageInner() {
 
 export default function MapPage() {
   return (
-    <Suspense fallback={
-      <div className="flex items-center justify-center" style={{ height: "100dvh" }}>
-        <Loader2 className="animate-spin text-brand-500" />
-      </div>
-    }>
-      <MapPageInner />
-    </Suspense>
+    <AppShell>
+      <Suspense fallback={
+        <div className="flex items-center justify-center" style={{ height: "100dvh" }}>
+          <Loader2 className="animate-spin text-brand-500" />
+        </div>
+      }>
+        <MapPageInner />
+      </Suspense>
+    </AppShell>
   );
 }

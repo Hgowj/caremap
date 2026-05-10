@@ -36,12 +36,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       </head>
       <body className="font-sans bg-gray-100 antialiased">
         <NextIntlClientProvider messages={messages}>
-          <div
-            className="w-full bg-white relative overflow-hidden md:max-w-[430px] md:mx-auto md:shadow-2xl"
-            style={{ height: "100dvh" }}
-          >
-            {children}
-          </div>
+          {children}
         </NextIntlClientProvider>
       </body>
     </html>

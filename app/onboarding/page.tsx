@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Check, Eye, EyeOff, Loader2, MapPin, X } from "lucide-react";
+import AppShell from "@/components/AppShell";
 
 type Step = "account" | "who" | "prefs";
 type UserType = "caregiver" | "other" | null;
@@ -134,6 +135,7 @@ export default function OnboardingPage() {
   };
 
   return (
+    <AppShell>
     <div className="flex flex-col h-full bg-white">
       {/* Progress */}
       <div className="h-1 bg-gray-100">
@@ -413,5 +415,6 @@ export default function OnboardingPage() {
         </div>
       )}
     </div>
+    </AppShell>
   );
 }
