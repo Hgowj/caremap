@@ -87,8 +87,8 @@ export default function ReportsPage() {
       <div className="px-4 pt-12 pb-4 bg-white border-b border-gray-100 shrink-0">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="font-display font-bold text-xl text-gray-800">Community Reports</h1>
-            <p className="text-sm text-gray-400 mt-0.5">Real-time conditions from caregivers</p>
+            <h1 className="font-display font-bold text-xl text-gray-800">Notes</h1>
+            <p className="text-sm text-gray-400 mt-0.5">Community-reported conditions</p>
           </div>
           <button
             onClick={() => setShowModal(true)}
@@ -108,9 +108,9 @@ export default function ReportsPage() {
         ) : reports.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full px-6 text-center">
             <p className="text-4xl mb-3">✅</p>
-            <p className="text-gray-600 font-medium">No active reports</p>
+            <p className="text-gray-600 font-medium">No active notes</p>
             <p className="text-gray-400 text-sm mt-1">
-              Tap <strong>Report</strong> above or the flag icon on the map.
+              Tap <strong>Notes</strong> above or the flag icon on the map.
             </p>
           </div>
         ) : (
